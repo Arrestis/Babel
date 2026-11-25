@@ -6,8 +6,9 @@ FEATURES=("$@")
 VERSION=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
 
 rustup target add aarch64-apple-darwin x86_64-apple-darwin
-cargo build --release --target aarch64-apple-darwin "${FEATURES[@]}"
-cargo build --release --target x86_64-apple-darwin "${FEATURES[@]}"
+# (the ${…+…} form keeps macOS's older bash happy when no options are given)
+cargo build --release --target aarch64-apple-darwin ${FEATURES[@]+"${FEATURES[@]}"}
+cargo build --release --target x86_64-apple-darwin ${FEATURES[@]+"${FEATURES[@]}"}
 
 APP=dist/BabelCraft.app
 rm -rf "$APP" && mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"

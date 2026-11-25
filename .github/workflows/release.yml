@@ -104,7 +104,7 @@ jobs:
 
   macos:
     name: macOS universal ${{ matrix.label }}
-    runs-on: macos-14
+    runs-on: macos-latest
     strategy:
       fail-fast: false
       matrix:
