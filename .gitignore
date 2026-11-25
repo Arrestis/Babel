@@ -1,0 +1,7 @@
+/target
+/shots
+/dist
+*.part
+*.swp
+.DS_Store
+Thumbs.db

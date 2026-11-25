@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=BabelCraft
+GenericName=Video Translator
+Comment=Translate English videos (on-screen text and speech) into Japanese
+Exec=babelcraft
+Icon=babelcraft
+Terminal=false
+Categories=AudioVideo;Video;Utility;
+Keywords=translate;japanese;dub;subtitle;ocr;whisper;
+StartupWMClass=babelcraft

@@ -1,0 +1,146 @@
+name: Build & Release
+
+# Builds BabelCraft for every platform on each push / PR.
+# Pushing a tag like v1.0.0 also publishes a GitHub Release with all files attached.
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  windows:
+    name: Windows ${{ matrix.label }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: x86_64-pc-windows-msvc,  label: x64,   features: "" }
+          - { target: i686-pc-windows-msvc,    label: x86,   features: "" }
+          - { target: aarch64-pc-windows-msvc, label: arm64, features: "" }
+          - { target: x86_64-pc-windows-msvc,  label: x64-whisper, features: "--features whisper" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}-${{ matrix.label }}
+      - name: Build
+        shell: bash
+        run: cargo build --release --target ${{ matrix.target }} ${{ matrix.features }}
+      - name: Test
+        if: matrix.target == 'x86_64-pc-windows-msvc' && matrix.features == ''
+        run: cargo test --release --target ${{ matrix.target }}
+      - name: Package
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path Cargo.toml -Pattern '^version = "(.*)"').Matches[0].Groups[1].Value
+          $name = "BabelCraft-$v-windows-${{ matrix.label }}"
+          New-Item -ItemType Directory -Force "dist/$name" | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/babelcraft.exe" "dist/$name/BabelCraft.exe"
+          Copy-Item README.md, LICENSE "dist/$name/"
+          Compress-Archive -Path "dist/$name/*" -DestinationPath "dist/$name.zip" -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.label }}
+          path: dist/*.zip
+
+  linux:
+    name: Linux ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-22.04,     label: x86_64,  features: "" }
+          - { os: ubuntu-22.04-arm, label: aarch64, features: "" }
+          - { os: ubuntu-22.04,     label: x86_64-whisper, features: "--features whisper" }
+    steps:
+      - uses: actions/checkout@v4
+      - name: System libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-dev libgl1-mesa-dev libx11-dev libxcursor-dev libxrandr-dev libxi-dev \
+            libwayland-dev libgtk-3-dev cmake clang libfuse2 file
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.label }}
+      - name: Build
+        run: cargo build --release ${{ matrix.features }}
+      - name: Test
+        if: matrix.features == ''
+        run: cargo test --release
+      - name: Package (tar.gz + .deb + AppImage)
+        run: |
+          V=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          NAME=BabelCraft-$V-linux-${{ matrix.label }}
+          mkdir -p dist/$NAME
+          cp target/release/babelcraft README.md LICENSE packaging/linux/babelcraft.desktop packaging/linux/install.sh assets/icon-256.png dist/$NAME/
+          tar -C dist -czf dist/$NAME.tar.gz $NAME
+          cargo install cargo-deb --locked
+          cargo deb --no-build --no-strip --output dist/
+          if [ -n "${{ matrix.features }}" ]; then for f in dist/*.deb; do mv "$f" "${f%.deb}-whisper.deb"; done; fi
+          bash packaging/linux/make-appimage.sh target/release/babelcraft
+          if [ -n "${{ matrix.features }}" ]; then for f in dist/*.AppImage; do case "$f" in *appimagetool*) ;; *) mv "$f" "${f%.AppImage}-whisper.AppImage";; esac; done; fi
+          rm -f dist/appimagetool-*.AppImage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.label }}
+          path: |
+            dist/*.tar.gz
+            dist/*.deb
+            dist/*.AppImage
+
+  macos:
+    name: macOS universal ${{ matrix.label }}
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { label: "",       features: "" }
+          - { label: "-metal", features: "--features whisper,metal" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: mac${{ matrix.label }}
+      - name: Test
+        if: matrix.features == ''
+        run: cargo test --release
+      - name: Build .app and .dmg
+        run: |
+          bash packaging/macos/make-app.sh ${{ matrix.features }}
+          if [ -n "${{ matrix.label }}" ]; then for f in dist/*.dmg; do mv "$f" "${f%.dmg}${{ matrix.label }}.dmg"; done; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos${{ matrix.label }}
+          path: dist/*.dmg
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, linux, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true

@@ -1,0 +1,84 @@
+﻿[package]
+name = "babelcraft"
+version = "1.1.0"
+edition = "2024"
+description = "Translate English videos (on-screen text + speech) into Japanese and render a finished dubbed video."
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/Arrestis/Babel"
+keywords = ["video", "translation", "japanese", "dubbing", "ocr"]
+categories = ["multimedia::video", "gui"]
+build = "build.rs"
+
+[[bin]]
+name = "babelcraft"
+path = "src/main.rs"
+
+[features]
+default = []
+# In-process Whisper (whisper.cpp via whisper-rs). Needs CMake + a C/C++ compiler (+ libclang)
+# at build time. Without it BabelCraft uses the whisper.cpp command-line tool (`whisper-cli`).
+whisper = ["dep:whisper-rs"]
+# GPU back-ends for in-process Whisper (pick the one that matches your machine).
+vulkan = ["whisper", "whisper-rs/vulkan"]
+cuda = ["whisper", "whisper-rs/cuda"]
+metal = ["whisper", "whisper-rs/metal"]
+
+[dependencies]
+eframe = { version = "0.37", default-features = false, features = ["default_fonts", "glow", "persistence", "wayland", "x11"] }
+rfd = "0.18"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "1"
+directories = "6"
+anyhow = "1"
+crossbeam-channel = "0.5"
+image ={ version = "0.25", default-features = false, features = ["png", "ico"] }
+ab_glyph = "0.2"
+hound = "3.5"
+whisper-rs = { version = "0.16", optional = true }
+ocrs = { version = "0.14", default-features = false, features = ["onnx"] }
+rten = { version = "0.28", default-features = false, features = ["onnx_format"] }
+zip = { version = "9", default-features = false, features = ["deflate-flate2"] }
+tar = "0.4"
+lzma-rs = "0.3"
+flate2 = "1"
+
+# Web downloads and AI services. Windows uses its own secure-connection support (SChannel),
+# so no C compiler is needed for any Windows target (x64, x86, ARM64); other systems use rustls.
+[target.'cfg(windows)'.dependencies]
+ureq = { version = "3", default-features = false, features = ["json", "gzip", "native-tls-no-default"] }
+
+[target.'cfg(not(windows))'.dependencies]
+ureq = { version = "3", features = ["json"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# Same winit eframe uses; needed to open the window without stealing focus in --screenshot mode.
+winit = "0.30"
+
+[build-dependencies]
+winresource = "0.1"
+
+[package.metadata.deb]
+maintainer = "BabelCraft contributors"
+section = "video"
+priority = "optional"
+depends = "$auto"
+recommends = "ffmpeg, fonts-noto-cjk"
+extended-description = "Desktop app that translates an English video's on-screen text and speech into Japanese and renders a dubbed video with FFmpeg."
+assets = [
+    ["target/release/babelcraft", "usr/bin/", "755"],
+    ["packaging/linux/babelcraft.desktop", "usr/share/applications/", "644"],
+    ["assets/icon-256.png", "usr/share/icons/hicolor/256x256/apps/babelcraft.png", "644"],
+    ["README.md", "usr/share/doc/babelcraft/README.md", "644"],
+]
+
+# The OCR neural network is very slow unoptimised; optimise it even in debug builds.
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true
