@@ -148,8 +148,11 @@ pub struct OcrConfig {
     pub change_threshold: f32,
     /// Tesseract word confidence (0-100) below which words are ignored.
     pub min_confidence: f32,
-    /// Text visible for less than this is ignored (flicker / motion blur).
+    /// Text visible for less than this is ignored (flicker / motion blur / animations).
     pub min_duration_ms: u32,
+    /// Lines shorter than this share of the picture height are ignored: menus, buttons and
+    /// interface labels in screen recordings, which would be unreadable as Japanese anyway.
+    pub min_text_height_percent: f32,
     pub tesseract_path: String,
     /// Tesseract page segmentation mode (3 = auto, 11 = sparse text).
     pub psm: u32,
@@ -165,7 +168,8 @@ impl Default for OcrConfig {
             interval_ms: 1000,
             change_threshold: 0.03,
             min_confidence: 60.0,
-            min_duration_ms: 700,
+            min_duration_ms: 1500,
+            min_text_height_percent: 3.0,
             tesseract_path: "tesseract".into(),
             psm: 11,
             language: "eng".into(),
@@ -436,6 +440,11 @@ impl Config {
         }
         if crate::brain::MODELS.iter().all(|m| m.id != self.translation.brain_model) {
             self.translation.brain_model = crate::brain::DEFAULT_MODEL.into();
+        }
+        // 1.1.0 and older kept text seen for 0.7 s, which let one-frame flashes of title
+        // animations through as garbled words; the new default needs two looks (1.5 s).
+        if self.ocr.min_duration_ms == 700 {
+            self.ocr.min_duration_ms = 1500;
         }
         self.api_keys.retain(|_, v| !v.trim().is_empty());
     }

@@ -255,7 +255,19 @@ fn check_translation(cfg: &Config) -> Check {
                     let has = body.contains(&format!("\"{}\"", t.ollama_model))
                         || body.contains(&format!("\"{}:latest\"", t.ollama_model));
                     if has {
-                        ok("Translator", format!("Ollama · {}", t.ollama_model))
+                        // Very large or programming-only models translate slowly and can stop Ollama.
+                        let warnings = crate::translate::preflight(cfg).unwrap_or_default();
+                        if let Some(w) = warnings.first() {
+                            Check {
+                                name: "Translator",
+                                status: Status::Warn,
+                                detail: format!("Ollama · {} — {w}", t.ollama_model),
+                                hint: "Pick a 4–14B general model in Settings → Translation (press List), or use the built-in offline AI brain.",
+                                fix: Some(Fix::UseBrain),
+                            }
+                        } else {
+                            ok("Translator", format!("Ollama · {}", t.ollama_model))
+                        }
                     } else {
                         let installed: Vec<String> = serde_json::from_str::<serde_json::Value>(&body)
                             .ok()

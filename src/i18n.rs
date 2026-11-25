@@ -176,6 +176,13 @@ fn ja(en: &str) -> Option<&'static str> {
         "change sensitivity" => "変化の感度",
         "min confidence" => "最低信頼度",
         "Ignore text shown less than" => "表示時間がこれより短い文字は無視",
+        "smallest text size" => "最小の文字サイズ",
+        "Pick a 4–14B general model in Settings → Translation (press List), or use the built-in offline AI brain." => {
+            "設定 → 翻訳 で 4〜14B の一般向けモデルを選ぶ（「一覧」を押す）か、内蔵のオフライン AI を使ってください。"
+        }
+        "Smaller lines (menus, buttons and labels in screen recordings) are left out. 0 keeps everything." => {
+            "これより小さい行（画面録画のメニュー・ボタン・ラベルなど）は除外します。0 ですべて残します。"
+        }
         "Layout mode" => "レイアウト方式",
         "Engine" => "エンジン",
         "Built-in" => "内蔵",

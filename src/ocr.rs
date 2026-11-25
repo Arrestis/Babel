@@ -6,7 +6,7 @@ use anyhow::Result;
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct BBox {
     pub x: f32,
     pub y: f32,
@@ -45,7 +45,7 @@ pub struct Detection {
 }
 
 /// A piece of on-screen text that stays visible from `start` to `end`.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct TextInterval {
     pub start: f64,
     pub end: f64,
@@ -56,18 +56,20 @@ pub struct TextInterval {
 
 /// Runs Tesseract on one image file and groups words into paragraphs/lines.
 /// `scale` converts OCR-frame pixels back to source-video pixels.
-pub fn run_tesseract(cfg: &Config, image: &Path, scale: f32, cancel: &CancelToken) -> Result<Vec<Detection>> {
+pub fn run_tesseract(cfg: &Config, image: &Path, scale: f32, min_line_h: f32, cancel: &CancelToken) -> Result<Vec<Detection>> {
     let mut cmd = silent_command(cfg.tesseract());
     cmd.arg(image)
         .arg("stdout")
         .args(["-l", &cfg.ocr.language, "--psm", &cfg.ocr.psm.to_string(), "-c", "preserve_interword_spaces=1", "tsv"]);
     let out = run_process(cmd, cancel, None, |_, _| {})?.ok_or_err("tesseract")?;
-    Ok(parse_tsv(&out.stdout, cfg.ocr.min_confidence, scale))
+    Ok(parse_tsv(&out.stdout, cfg.ocr.min_confidence, scale, min_line_h))
 }
 
 /// OCR that runs inside BabelCraft (ocrs neural network; no external program).
 pub struct BuiltinOcr {
     engine: ocrs::OcrEngine,
+    /// Lines skipped because they were smaller than the minimum text height.
+    pub skipped_small: std::cell::Cell<usize>,
 }
 
 impl BuiltinOcr {
@@ -81,11 +83,12 @@ impl BuiltinOcr {
             ..Default::default()
         })
         .map_err(|e| anyhow::anyhow!("OCR engine: {e}"))?;
-        Ok(Self { engine })
+        Ok(Self { engine, skipped_small: std::cell::Cell::new(0) })
     }
 
-    /// Finds English text in a grayscale frame. `scale` maps frame pixels to video pixels.
-    pub fn detect(&self, gray: &[u8], w: u32, h: u32, scale: f32) -> Result<Vec<Detection>> {
+    /// Finds English text in a grayscale frame. `scale` maps frame pixels to video pixels;
+    /// lines less than `min_line_h` frame pixels tall are skipped.
+    pub fn detect(&self, gray: &[u8], w: u32, h: u32, scale: f32, min_line_h: f32) -> Result<Vec<Detection>> {
         use ocrs::TextItem;
         let src = ocrs::ImageSource::from_bytes(gray, (w, h)).map_err(|e| anyhow::anyhow!("OCR input: {e}"))?;
         let input = self.engine.prepare_input(src).map_err(|e| anyhow::anyhow!("OCR: {e}"))?;
@@ -104,6 +107,10 @@ impl BuiltinOcr {
                 }
                 let r = line.bounding_rect();
                 let b = BBox { x: r.left() as f32, y: r.top() as f32, w: r.width() as f32, h: r.height() as f32 };
+                if b.h < min_line_h {
+                    self.skipped_small.set(self.skipped_small.get() + 1);
+                    return None;
+                }
                 Some((b, text))
             })
             .collect();
@@ -141,7 +148,7 @@ struct LineAcc {
     n: usize,
 }
 
-pub fn parse_tsv(tsv: &str, min_conf: f32, scale: f32) -> Vec<Detection> {
+pub fn parse_tsv(tsv: &str, min_conf: f32, scale: f32, min_line_h: f32) -> Vec<Detection> {
     // key: (block, par, line)
     let mut lines: BTreeMap<(u32, u32, u32), LineAcc> = BTreeMap::new();
     for row in tsv.lines().skip(1) {
@@ -169,7 +176,7 @@ pub fn parse_tsv(tsv: &str, min_conf: f32, scale: f32) -> Vec<Detection> {
     for ((blk, par, _), mut acc) in lines {
         acc.words.sort_by(|a, b| a.0.total_cmp(&b.0));
         let text = acc.words.iter().map(|w| w.1.as_str()).collect::<Vec<_>>().join(" ");
-        if let Some(b) = acc.bbox {
+        if let Some(b) = acc.bbox.filter(|b| b.h >= min_line_h) {
             paras.entry((blk, par)).or_default().push((b, text, acc.conf_sum / acc.n.max(1) as f32));
         }
     }
@@ -215,11 +222,52 @@ pub fn parse_tsv(tsv: &str, min_conf: f32, scale: f32) -> Vec<Detection> {
         .collect()
 }
 
-/// Rejects OCR noise: needs real letters and mostly-letter content.
+/// Rejects OCR noise: needs mostly-letter content, and most of its words (3+ letters) must
+/// look like real words rather than misread icons and graphics.
 fn looks_like_english(t: &str) -> bool {
     let letters = t.chars().filter(|c| c.is_ascii_alphabetic()).count();
     let visible = t.chars().filter(|c| !c.is_whitespace()).count();
-    letters >= 2 && visible > 0 && letters as f32 / visible as f32 >= 0.55 && t.split_whitespace().any(|w| w.chars().filter(|c| c.is_ascii_alphabetic()).count() >= 2)
+    if letters < 2 || visible == 0 || (letters as f32 / visible as f32) < 0.55 {
+        return false;
+    }
+    let words: Vec<&str> = t.split(|c: char| !c.is_ascii_alphabetic()).filter(|w| w.len() >= 3).collect();
+    let plausible = words.iter().filter(|w| plausible_word(w)).count();
+    plausible >= 1 && plausible * 2 >= words.len()
+}
+
+/// A letters-only token that could be a real word: lower case, ALL CAPS, Capitalised or
+/// CamelCase (iPhone, PowerPoint); no letter three times in a row; long words need a vowel.
+fn plausible_word(w: &str) -> bool {
+    let b = w.as_bytes();
+    if b.windows(3).any(|x| x[0].eq_ignore_ascii_case(&x[1]) && x[1].eq_ignore_ascii_case(&x[2])) {
+        return false;
+    }
+    if b.len() >= 6 && !b.iter().any(|c| b"aeiouyAEIOUY".contains(c)) {
+        return false;
+    }
+    let all_lower = b.iter().all(|c| c.is_ascii_lowercase());
+    let all_upper = b.iter().all(|c| c.is_ascii_uppercase());
+    // Plural acronyms: DVDs, URLs.
+    let plural_acronym = b.len() >= 3 && b[b.len() - 1] == b's' && b[..b.len() - 1].iter().all(|c| c.is_ascii_uppercase());
+    if all_lower || all_upper || plural_acronym {
+        return true;
+    }
+    // Optional single lower-case letter, then chunks of one capital followed by lower case.
+    let mut i = usize::from(b[0].is_ascii_lowercase() && b.len() > 1 && b[1].is_ascii_uppercase());
+    while i < b.len() {
+        if !b[i].is_ascii_uppercase() {
+            return false;
+        }
+        let start = i;
+        i += 1;
+        while i < b.len() && b[i].is_ascii_lowercase() {
+            i += 1;
+        }
+        if i - start < 2 {
+            return false;
+        }
+    }
+    true
 }
 
 pub fn normalize(t: &str) -> String {
@@ -455,7 +503,7 @@ mod tests {
 5\t1\t1\t1\t1\t1\t10\t10\t50\t20\t95\tHello\n\
 5\t1\t1\t1\t1\t2\t70\t10\t60\t20\t93\tWorld\n\
 5\t1\t2\t1\t1\t1\t10\t300\t30\t20\t20\t~~\n";
-        let d = parse_tsv(tsv, 60.0, 1.0);
+        let d = parse_tsv(tsv, 60.0, 1.0, 0.0);
         assert_eq!(d.len(), 1);
         assert_eq!(d[0].text, "Hello World");
         assert_eq!(d[0].bbox.w, 120.0);
@@ -473,6 +521,25 @@ mod tests {
         let v = t.finish(10.0, 0.5);
         assert_eq!(v.len(), 1);
         assert!((v[0].start - 0.0).abs() < 1e-6 && (v[0].end - 4.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn tells_real_text_from_ocr_noise() {
+        for real in [
+            "ADDING CHAPTERS AND MENUS",
+            "Joy & Mark Hopkins",
+            "Welcome to the course",
+            "PowerPoint and iPhone tips",
+            "Export to DVD or HTML",
+            "DVDs and URLs",
+            "EDVC.UK.Com",
+            "Bride Submenu",
+        ] {
+            assert!(looks_like_english(real), "should keep {real:?}");
+        }
+        for noise in ["mmmmin", "TeOD", "mLL", "M3o", "KTITPor", "PS", "TTTIT", "9OD", "ATIsor oN"] {
+            assert!(!looks_like_english(noise), "should drop {noise:?}");
+        }
     }
 
     #[test]

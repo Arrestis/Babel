@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.1
+
+### Fixed
+- **Jobs that stopped after transcription.** The translator is now checked before the job starts: a missing API key, a stopped Ollama/LM Studio server or a missing model is reported at once with what to do (or switch to the built-in offline AI brain), instead of after minutes of text reading and transcription. Very large or programming-only Ollama models get a warning (they can make Ollama's engine stop), and if Ollama's engine stops mid-job the message says why.
+- **Minimised window froze.** While BabelCraft was minimised its progress, taskbar title, log and stage times stopped updating (the job kept running unseen). The window now keeps track of the job while minimised.
+- **Screen recordings produced hundreds of junk translations.** Text smaller than 3% of the picture height (menus, buttons, interface labels) is left out, one-frame flashes of title animations are ignored (text must stay 1.5 s), and garbled words are recognised as noise. On a 4-minute tutorial this went from 358 to 12 pieces of on-screen text. *Settings → On-screen text → smallest text size* changes it.
+- **Choppy, misaligned dubbing.** Whisper's pieces often stop mid-sentence; they are now joined into whole sentences (with estimated times) before translation and voicing, and lines are numbered so every batch comes back complete and in order.
+
+### New
+- Re-running a job after a failure carries on where it stopped: the on-screen text, the transcription and every line already translated are kept (in BabelCraft's data folder, for 30 days).
+- A log file (`logs/babelcraft.log` in BabelCraft's data folder) records every job, and any internal error is written there before the app closes; an internal error in a job ends it with a message instead of leaving the window waiting.
+
 ## 1.1.0
 
 ### New

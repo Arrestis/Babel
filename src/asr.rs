@@ -6,7 +6,7 @@ use crate::util::{CancelToken, run_process, silent_command};
 use anyhow::{Context, Result, bail};
 use std::path::Path;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Segment {
     pub start: f64,
     pub end: f64,
@@ -133,6 +133,77 @@ fn post_transcription(agent: &ureq::Agent, base: &str, key: &str, model: &str, w
     serde_json::from_str(&text).context("unexpected reply from the speech service")
 }
 
+/// Joins Whisper's pieces (which often stop mid-sentence) into whole sentences, with start and
+/// end times estimated from where each sentence falls inside the pieces. Each line given to the
+/// translator and the voice is then a complete thought: better Japanese, and the dub stays in
+/// step. A pause of more than 1.5 s, or a run-on longer than 20 s, also ends a line.
+pub fn to_sentences(segs: &[Segment]) -> Vec<Segment> {
+    const MAX_LEN_SECS: f64 = 20.0;
+    const PAUSE_SECS: f64 = 1.5;
+    let mut out: Vec<Segment> = Vec::new();
+    let mut text = String::new();
+    let mut start: Option<f64> = None;
+    let mut end = 0.0f64;
+    let flush = |text: &mut String, start: &mut Option<f64>, end: f64, out: &mut Vec<Segment>| {
+        let t = text.trim().to_string();
+        if let (Some(s), false) = (*start, t.is_empty()) {
+            out.push(Segment { start: s, end: end.max(s + 0.2), english: t, japanese: String::new() });
+        }
+        text.clear();
+        *start = None;
+    };
+    for seg in segs {
+        let chars: Vec<char> = seg.english.trim().chars().collect();
+        if chars.is_empty() {
+            continue;
+        }
+        // A long pause or a very long run-on closes the open line at the piece boundary.
+        if start.is_some() && (seg.start - end > PAUSE_SECS || seg.end - start.unwrap_or(seg.start) > MAX_LEN_SECS) {
+            flush(&mut text, &mut start, end, &mut out);
+        }
+        let n = chars.len() as f64;
+        let at = |i: usize| seg.start + (seg.end - seg.start) * (i as f64 / n);
+        let mut piece_start = 0usize;
+        for i in 0..chars.len() {
+            let ends_sentence = matches!(chars[i], '.' | '!' | '?')
+                && chars.get(i + 1).is_none_or(|c| c.is_whitespace() || *c == '"')
+                && !is_abbreviation(&chars[..=i]);
+            if ends_sentence {
+                let piece: String = chars[piece_start..=i].iter().collect();
+                if !piece.trim().is_empty() {
+                    if start.is_none() {
+                        start = Some(at(piece_start));
+                    }
+                    text.push(' ');
+                    text.push_str(piece.trim());
+                    end = at(i + 1);
+                    flush(&mut text, &mut start, end, &mut out);
+                }
+                piece_start = i + 1;
+            }
+        }
+        let rest: String = chars[piece_start.min(chars.len())..].iter().collect();
+        if !rest.trim().is_empty() {
+            if start.is_none() {
+                start = Some(at(piece_start));
+            }
+            text.push(' ');
+            text.push_str(rest.trim());
+            end = seg.end;
+        }
+    }
+    flush(&mut text, &mut start, end, &mut out);
+    out
+}
+
+/// "Mr." "Dr." "e.g." … don't end a sentence.
+fn is_abbreviation(upto: &[char]) -> bool {
+    let word: String = upto.iter().rev().take_while(|c| !c.is_whitespace()).collect::<Vec<_>>().into_iter().rev().collect();
+    let w = word.trim_start_matches(|c: char| !c.is_alphanumeric()).to_ascii_lowercase();
+    matches!(w.as_str(), "mr." | "mrs." | "ms." | "dr." | "st." | "vs." | "etc." | "e.g." | "i.e." | "no." | "jr." | "sr.")
+        || (w.len() == 2 && w.ends_with('.') && w != "i." && w.chars().next().is_some_and(|c| c.is_ascii_alphabetic()))
+}
+
 /// Drops empty/non-speech segments like "[MUSIC]" and trims text.
 pub fn clean_segments(raw: Vec<Segment>) -> Vec<Segment> {
     raw.into_iter()
@@ -238,6 +309,32 @@ fn builtin(_: &Config, _: &Path, _: &Path, _: &CancelToken, _: impl FnMut(f32) +
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn seg(start: f64, end: f64, text: &str) -> Segment {
+        Segment { start, end, english: text.into(), japanese: String::new() }
+    }
+
+    #[test]
+    fn pieces_become_whole_sentences() {
+        let pieces = vec![
+            seg(0.0, 10.0, "First I want to add chapters. So I'm going to look"),
+            seg(10.0, 16.0, "through it and say yeah, a chapter there."),
+            seg(16.0, 20.0, "Click on Mr. Smith's button"),
+            // a long pause closes the open line
+            seg(25.0, 28.0, "and that's it."),
+        ];
+        let s = to_sentences(&pieces);
+        let texts: Vec<&str> = s.iter().map(|x| x.english.as_str()).collect();
+        assert_eq!(
+            texts,
+            vec!["First I want to add chapters.", "So I'm going to look through it and say yeah, a chapter there.", "Click on Mr. Smith's button", "and that's it."]
+        );
+        // "First I want to add chapters." is 29 of the 50 characters of the first piece.
+        assert!((s[0].end - 5.8).abs() < 0.3, "end {}", s[0].end);
+        assert!((s[1].start - s[0].end).abs() < 0.3);
+        assert!((s[1].end - 16.0).abs() < 1e-9);
+        assert!((s[3].start - 25.0).abs() < 1e-9);
+    }
+
     #[test]
     fn parses_whisper_cli_json() {
         let j = r#"{"transcription":[{"offsets":{"from":0,"to":2500},"text":" Hello there."},{"offsets":{"from":2500,"to":4000},"text":" [MUSIC]"}]}"#;

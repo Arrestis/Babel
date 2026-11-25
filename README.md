@@ -116,11 +116,26 @@ Saved automatically as TOML:
 - Linux `~/.config/babelcraft/config.toml`
 
 Downloaded tools and models go to the matching data folder (`.../data/tools`, `.../data/models`, `.../data/fonts`).
-**Portable mode:** create a folder named `babelcraft-data` next to the program (or set `BABELCRAFT_DATA_DIR`) and everything is stored there instead — USB-stick friendly. Copies of FFmpeg/whisper-cli placed next to `BabelCraft.exe` (or in a `tools/` subfolder) are used first.
+**Portable mode:** create a folder named `babelcraft-data` next to the program (or set `BABELCRAFT_DATA_DIR`) and everything is stored there instead, settings included — USB-stick friendly. Copies of FFmpeg/whisper-cli placed next to `BabelCraft.exe` (or in a `tools/` subfolder) are used first.
+
+**Log file:** every job is written to `.../data/logs/babelcraft.log` (Windows: `%APPDATA%\BabelCraft\babelcraft\data\logs\babelcraft.log`); if BabelCraft ever hits an internal error, the details are written there before it closes.
+
+**Picking up where a job stopped:** the on-screen text, the transcription and every line already translated are kept in `.../data/cache` for 30 days, so running the same video again (after fixing a translator setting, say) skips the slow steps and never pays twice for the same online translation.
 
 API keys typed into BabelCraft are stored in plain text in the settings file on your computer only.
 
-Key options: translation service + model + style/glossary hint · audio mode *Replace* or *Duck* (level %, whole-track or only under speech, keep English as a 2nd track) · max speed-up for long lines · OCR sampling interval, "only when the picture changes" threshold, confidence, minimum on-screen time · overlay box opacity / font · Whisper engine, model, GPU, threads, or an online Whisper service · voice engine and voice · x264 quality (CRF) and speed · interface language.
+Key options: translation service + model + style/glossary hint · audio mode *Replace* or *Duck* (level %, whole-track or only under speech, keep English as a 2nd track) · max speed-up for long lines · OCR sampling interval, "only when the picture changes" threshold, confidence, minimum on-screen time, smallest text size (default 3 % of the picture height — leaves out menus and interface labels in screen recordings) · overlay box opacity / font · Whisper engine, model, GPU, threads, or an online Whisper service · voice engine and voice · x264 quality (CRF) and speed · interface language.
+
+## When a job stops
+
+BabelCraft checks the translator before it starts, so most problems are reported at once with what to do:
+
+- *"Claude / OpenAI / … needs an API key"* — paste the key in **Settings → Translation** or on **AI models & downloads**, or choose the built-in offline AI brain (free, no key).
+- *"Ollama isn't running" / "Ollama has no model called …"* — start the Ollama app, or press **List** next to the model and pick one you have.
+- *"… is very large"* — models over ~24 GB (or ones made for programming) translate slowly and can make Ollama's engine stop when memory runs out; a 4–14B general model, or the offline brain, works better.
+- Anything else: the log file above says what happened. Running the job again carries on from where it stopped.
+
+While BabelCraft is minimised the job keeps running and the taskbar title shows its progress.
 
 ## Build from source
 
@@ -181,11 +196,11 @@ babelcraft --version
 1. Put these files in your repository folder (e.g. a clone of `https://github.com/Arrestis/Babel`), then:
    ```bash
    git add .
-   git commit -m "BabelCraft 1.1.0"
+   git commit -m "BabelCraft 1.1.1"
    git push
    ```
 2. **Actions** builds every platform on each push (`.github/workflows/release.yml`).
-3. To publish downloads: `git tag v1.1.0 && git push origin v1.1.0` → a Release is created with:
+3. To publish downloads: `git tag v1.1.1 && git push origin v1.1.1` → a Release is created with:
    Windows x64 / x86 / ARM64 / x64-whisper `.zip`, Linux x86_64 / aarch64 `.tar.gz` + `.deb` + `.AppImage` (+ x86_64-whisper), macOS universal `.dmg` (+ `-metal`).
 
 ## Project layout
@@ -213,7 +228,8 @@ src/tts.rs              VOICEVOX / OpenAI-compatible / system voice / edge-tts /
 src/tools.rs            automatic downloads (FFmpeg, whisper.cpp, models, font)
 src/config.rs           persisted settings (serde + TOML)
 src/checks.rs           startup checks with one-click fixes
-src/util.rs             silent child processes, cancel token, downloads, messages
+src/util.rs             silent child processes, cancel token, resumable downloads, messages
+src/logfile.rs          the log file and the internal-error recorder
 packaging/              Linux .desktop/AppImage/install, macOS Info.plist/.app/.dmg
 ```
 
@@ -223,7 +239,8 @@ Run the tests with `cargo test`. The download tests are opt-in (they fetch gigab
 ## Notes & limits
 
 - *Replace* mode removes the whole original soundtrack (music included); use *Duck* to keep background sound under the Japanese voice.
-- On-screen text: big, high-contrast text (titles, slides, captions) works best; stylised or moving text may be missed.
+- On-screen text: big, high-contrast text (titles, slides, captions) works best; stylised or moving text may be missed. Text the translator keeps in English (names, web addresses, codes) is left as it is, without a box.
+- Speech is translated and voiced sentence by sentence (Whisper's pieces are joined into whole sentences first).
 - Translation and voice quality depend on the model and voice you pick. The 4B/7B offline models, Claude, GPT, Gemini or DeepL give natural Japanese.
 - With an online service, the text (and for online speech recognition, the audio) is sent to that service.
 - Third-party licences: Noto Sans JP — SIL Open Font License; Whisper models — MIT; llama.cpp — MIT; models — see the table above; VOICEVOX — see its terms; FFmpeg builds — GPL.

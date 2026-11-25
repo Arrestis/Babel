@@ -27,7 +27,14 @@ pub fn spawn(job: Job, rep: Reporter, cancel: CancelToken) -> std::thread::JoinH
         .name("babelcraft-pipeline".into())
         .spawn(move || {
             let tmp = temp_dir();
-            let result = run(&job, &tmp, &rep, &cancel);
+            // An internal error must end the job with a message, never leave the window waiting.
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run(&job, &tmp, &rep, &cancel))).unwrap_or_else(|p| {
+                Err(anyhow::anyhow!(
+                    "internal error: {} (details in {})",
+                    crate::logfile::panic_message(p.as_ref()),
+                    crate::logfile::path().display()
+                ))
+            });
             if !job.cfg.tools.keep_temp_files {
                 let _ = std::fs::remove_dir_all(&tmp);
             } else {
@@ -49,6 +56,84 @@ fn temp_dir() -> PathBuf {
     let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0);
     std::env::temp_dir().join(format!("babelcraft-{}-{stamp}", std::process::id()))
 }
+
+// ------------------------------------------------------------- saved results
+// The slow steps' results are kept per video and settings, so running a job again (after
+// fixing the translator, say) skips straight to the part that failed.
+
+fn input_identity(input: &Path) -> String {
+    let meta = std::fs::metadata(input).ok();
+    let size = meta.as_ref().map(|m| m.len()).unwrap_or(0);
+    let modified = meta
+        .and_then(|m| m.modified().ok())
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    format!("{}|{size}|{modified}", input.display())
+}
+
+fn ocr_cache_key(cfg: &Config, input: &Path) -> String {
+    let o = &cfg.ocr;
+    format!(
+        "screen-v2|{}|{:?}|{:?}|{}|{}|{}|{}|{}|{}|{}",
+        input_identity(input),
+        o.engine,
+        o.sampling,
+        o.interval_ms,
+        o.change_threshold,
+        o.min_confidence,
+        o.min_duration_ms,
+        o.min_text_height_percent,
+        o.psm,
+        o.language
+    )
+}
+
+fn asr_cache_key(cfg: &Config, input: &Path) -> String {
+    let a = &cfg.asr;
+    let engine = if a.engine == crate::config::AsrEngine::Api {
+        format!("api|{}|{}|{}", a.api_service, a.api_url, a.api_model)
+    } else {
+        format!("{:?}|{}", a.engine, cfg.whisper_model().display())
+    };
+    format!("speech-v1|{}|{engine}", input_identity(input))
+}
+
+fn cache_file(kind: &str, key: &str) -> PathBuf {
+    crate::config::data_dir().join("cache").join(format!("{kind}-{}.json", crate::util::short_hash(key)))
+}
+
+fn load_cache<T: serde::de::DeserializeOwned>(path: &Path) -> Option<T> {
+    serde_json::from_str(&std::fs::read_to_string(path).ok()?).ok()
+}
+
+fn save_cache<T: serde::Serialize>(path: &Path, value: &T) {
+    if let Some(dir) = path.parent() {
+        let _ = std::fs::create_dir_all(dir);
+    }
+    if let Ok(text) = serde_json::to_string(value) {
+        let tmp = path.with_extension("tmp");
+        if std::fs::write(&tmp, text).is_ok() {
+            let _ = std::fs::rename(&tmp, path);
+        }
+    }
+}
+
+/// Saved results older than 30 days are removed.
+fn prune_cache() {
+    let dir = crate::config::data_dir().join("cache");
+    let Ok(entries) = std::fs::read_dir(&dir) else { return };
+    let limit = std::time::Duration::from_secs(30 * 24 * 3600);
+    for e in entries.flatten() {
+        let old = e.metadata().ok().and_then(|m| m.modified().ok()).and_then(|t| t.elapsed().ok()).map(|age| age > limit).unwrap_or(false);
+        if old {
+            let _ = std::fs::remove_file(e.path());
+        }
+    }
+}
+
+const SAVED_NOTE: &str = "The on-screen text, the transcription and every line already translated are saved: \
+    run the job again after fixing this and it carries on from here.";
 
 fn stage_done(rep: &Reporter, s: Stage) {
     rep.progress(1.0);
@@ -104,6 +189,17 @@ fn run(job: &Job, tmp: &Path, rep: &Reporter, cancel: &CancelToken) -> Result<Pa
     rep.send(Msg::StageStart(Stage::Extract));
     rep.info(format!("Input:  {}", job.input.display()));
     rep.info(format!("Output: {}", job.output.display()));
+
+    // Check the translator first: a missing key or a stopped server is reported now,
+    // not after minutes of text reading and transcription.
+    if cfg.ocr.enabled || cfg.asr.enabled {
+        let name = crate::ai::provider(&cfg.translation.provider).map(|p| p.name).unwrap_or(cfg.translation.backend.label());
+        rep.info(format!("Checking the translator ({name})…"));
+        for w in crate::translate::preflight(cfg)? {
+            rep.warn(w);
+        }
+    }
+    prune_cache();
 
     // First run: fetch anything missing (FFmpeg, models, font, Whisper tool) into BabelCraft's own folder.
     let missing = crate::tools::missing(cfg);
@@ -173,7 +269,17 @@ fn run(job: &Job, tmp: &Path, rep: &Reporter, cancel: &CancelToken) -> Result<Pa
     let mut intervals: Vec<TextInterval> = Vec::new();
     if cfg.ocr.enabled {
         rep.send(Msg::StageStart(Stage::Ocr));
-        intervals = scan_text(cfg, &job.input, &info, tmp, rep, cancel)?;
+        let saved = cache_file("screen-text", &ocr_cache_key(cfg, &job.input));
+        match load_cache::<Vec<TextInterval>>(&saved) {
+            Some(v) => {
+                rep.info(format!("Reusing the on-screen text read in an earlier run of this video ({} regions).", v.len()));
+                intervals = v;
+            }
+            None => {
+                intervals = scan_text(cfg, &job.input, &info, tmp, rep, cancel)?;
+                save_cache(&saved, &intervals);
+            }
+        }
         rep.log(LogLevel::Ok, format!("Found {} distinct on-screen text regions.", intervals.len()));
         stage_done(rep, Stage::Ocr);
     }
@@ -188,10 +294,23 @@ fn run(job: &Job, tmp: &Path, rep: &Reporter, cancel: &CancelToken) -> Result<Pa
         } else {
             rep.info(format!("Transcribing with Whisper model {}", cfg.whisper_model().display()));
         }
-        let r2 = rep.clone();
-        let r3 = rep.clone();
-        segments = asr::transcribe(cfg, &wav16, tmp, cancel, move |f| r2.progress(f), move |m| r3.warn(m))?;
-        rep.log(LogLevel::Ok, format!("Transcribed {} speech segments.", segments.len()));
+        let saved = cache_file("speech", &asr_cache_key(cfg, &job.input));
+        match load_cache::<Vec<Segment>>(&saved) {
+            Some(v) => {
+                rep.info(format!("Reusing the transcription made in an earlier run of this video ({} lines).", v.len()));
+                segments = v;
+            }
+            None => {
+                let r2 = rep.clone();
+                let r3 = rep.clone();
+                segments = asr::transcribe(cfg, &wav16, tmp, cancel, move |f| r2.progress(f), move |m| r3.warn(m))?;
+                save_cache(&saved, &segments);
+            }
+        }
+        // Whisper's pieces often stop mid-sentence: translate and voice whole sentences.
+        let pieces = segments.len();
+        segments = asr::to_sentences(&segments);
+        rep.log(LogLevel::Ok, format!("Transcribed {pieces} speech segments ({} sentences).", segments.len()));
         for s in segments.iter().take(5) {
             rep.info(format!("  [{} → {}] {}", fmt_ts(s.start), fmt_ts(s.end), s.english));
         }
@@ -203,14 +322,23 @@ fn run(job: &Job, tmp: &Path, rep: &Reporter, cancel: &CancelToken) -> Result<Pa
         rep.send(Msg::StageStart(Stage::Translate));
         let mut tr = Translator::new(cfg);
         rep.info(format!("Translator: {}", crate::ai::provider(&cfg.translation.provider).map(|p| p.name).unwrap_or(cfg.translation.backend.label())));
+        // If translating fails, say that nothing done so far is lost.
+        let keep_note = |e: anyhow::Error| {
+            if !is_cancel_error(&e) {
+                rep.warn(SAVED_NOTE);
+            }
+            e
+        };
         // The offline AI brain runs only while translating (stopped again when `brain` is dropped).
-        let brain = tr.prepare(cancel, &mut |m| rep.info(m))?;
+        let brain = tr.prepare(cancel, &mut |m| rep.info(m)).map_err(keep_note)?;
         let total = (intervals.len() + segments.len()).max(1);
         let screen_texts: Vec<String> = intervals.iter().map(|i| i.english.clone()).collect();
         let speech_texts: Vec<String> = segments.iter().map(|s| s.english.clone()).collect();
         if !screen_texts.is_empty() {
             rep.info(format!("Translating {} on-screen texts…", screen_texts.len()));
-            let ja = tr.translate_all(&screen_texts, TextKind::OnScreen, cancel, |n| rep.progress(n as f32 / total as f32), |w| rep.warn(w))?;
+            let ja = tr
+                .translate_all(&screen_texts, TextKind::OnScreen, cancel, |n| rep.progress(n as f32 / total as f32), |w| rep.warn(w))
+                .map_err(keep_note)?;
             for (i, j) in intervals.iter_mut().zip(ja) {
                 i.japanese = j;
             }
@@ -218,7 +346,9 @@ fn run(job: &Job, tmp: &Path, rep: &Reporter, cancel: &CancelToken) -> Result<Pa
         if !speech_texts.is_empty() {
             rep.info(format!("Translating {} speech segments…", speech_texts.len()));
             let base = intervals.len();
-            let ja = tr.translate_all(&speech_texts, TextKind::Speech, cancel, |n| rep.progress((base + n) as f32 / total as f32), |w| rep.warn(w))?;
+            let ja = tr
+                .translate_all(&speech_texts, TextKind::Speech, cancel, |n| rep.progress((base + n) as f32 / total as f32), |w| rep.warn(w))
+                .map_err(keep_note)?;
             for (s, j) in segments.iter_mut().zip(ja) {
                 s.japanese = j;
             }
@@ -228,6 +358,16 @@ fn run(job: &Job, tmp: &Path, rep: &Reporter, cancel: &CancelToken) -> Result<Pa
         }
         for s in segments.iter().take(3) {
             rep.info(format!("  \"{}\" → 「{}」", s.english, s.japanese));
+        }
+        // Text the translator kept in English (names, web addresses, codes, misread bits)
+        // gets no box: a box with the same English would only hide the original.
+        let before = intervals.len();
+        intervals.retain(|i| has_japanese(&i.japanese));
+        if intervals.len() < before {
+            rep.info(format!(
+                "Left {} on-screen texts as they are (names, addresses or codes the translator kept in English).",
+                before - intervals.len()
+            ));
         }
         if brain.is_some() {
             drop(brain);
@@ -327,15 +467,17 @@ fn scan_text(cfg: &Config, input: &Path, info: &MediaInfo, tmp: &Path, rep: &Rep
     let mut ocr_runs = 0usize;
     let mut skipped = 0usize;
     let mut warned = false;
+    // Lines smaller than this (frame pixels) are menus and interface labels, not titles.
+    let min_line_h = cfg.ocr.min_text_height_percent.clamp(0.0, 20.0) / 100.0 * h as f32;
     video::stream_gray_frames(cfg, input, info, interval, cancel, |idx, t, pixels| {
         rep.progress(idx as f32 / expected as f32);
         let thumb = ocr::thumbnail(pixels, w, h);
         if detector.needs_ocr(cfg, thumb) {
             let result = match &builtin {
-                Some(engine) => engine.detect(pixels, w, h, scale),
+                Some(engine) => engine.detect(pixels, w, h, scale, min_line_h),
                 None => {
                     image::GrayImage::from_raw(w, h, pixels.to_vec()).context("frame size mismatch")?.save(&frame_png)?;
-                    ocr::run_tesseract(cfg, &frame_png, scale, cancel)
+                    ocr::run_tesseract(cfg, &frame_png, scale, min_line_h, cancel)
                 }
             };
             match result {
@@ -359,6 +501,12 @@ fn scan_text(cfg: &Config, input: &Path, info: &MediaInfo, tmp: &Path, rep: &Rep
         Ok(())
     })?;
     rep.info(format!("OCR ran on {ocr_runs} frames; {skipped} unchanged frames skipped."));
+    if let Some(n) = builtin.as_ref().map(|b| b.skipped_small.get()).filter(|n| *n > 0) {
+        rep.info(format!(
+            "Left out {n} lines of small text (under {:.1}% of the picture height: menus, buttons, labels). Settings → On-screen text changes this.",
+            cfg.ocr.min_text_height_percent
+        ));
+    }
     let v = tracker.finish(info.duration, cfg.ocr.min_duration_ms as f64 / 1000.0);
     for i in v.iter().take(5) {
         rep.info(format!("  [{} → {}] \"{}\"", fmt_ts(i.start), fmt_ts(i.end), i.english));
@@ -412,6 +560,11 @@ fn synthesize(cfg: &Config, speak: &[&Segment], info: &MediaInfo, tmp: &Path, re
     Ok(clips)
 }
 
+/// Contains Japanese writing (kana or kanji).
+fn has_japanese(s: &str) -> bool {
+    s.chars().any(|c| matches!(c, '\u{3040}'..='\u{30ff}' | '\u{3400}'..='\u{4dbf}' | '\u{4e00}'..='\u{9fff}' | '\u{ff66}'..='\u{ff9f}'))
+}
+
 /// `video.ja.mp4` → `video.ja.srt`; `video.mp4` → `video.ja.srt`.
 pub fn subtitle_path(output: &Path) -> PathBuf {
     let already_ja = output.file_stem().map(|s| s.to_string_lossy().to_ascii_lowercase().ends_with(".ja")).unwrap_or(false);
@@ -434,6 +587,110 @@ fn write_srt(path: &Path, segs: &[Segment]) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// One job on any video with the person's own saved settings (translation switched to the
+    /// free offline brain unless BABELCRAFT_TEST_KEEP_TRANSLATOR=1), output in target/e2e/file.
+    /// Run with: BABELCRAFT_DATA_DIR=target/testdata BABELCRAFT_TEST_INPUT=<video>
+    ///           cargo test job_on_file -- --ignored --nocapture
+    /// (BABELCRAFT_TEST_WHISPER_CLI / BABELCRAFT_TEST_WHISPER_MODEL pick a whisper-cli and model.)
+    #[test]
+    #[ignore]
+    fn job_on_file() {
+        let input = std::path::absolute(std::env::var("BABELCRAFT_TEST_INPUT").expect("set BABELCRAFT_TEST_INPUT")).unwrap();
+        let mut cfg = Config::load();
+        if std::env::var("BABELCRAFT_TEST_KEEP_TRANSLATOR").is_err() {
+            cfg.translation.backend = crate::config::TranslationBackend::BuiltinBrain;
+            cfg.translation.provider = "brain".into();
+        }
+        cfg.tts.voicevox_url = "http://127.0.0.1:50121".into();
+        if let Ok(p) = std::env::var("BABELCRAFT_TEST_WHISPER_CLI") {
+            cfg.asr.whisper_cli_path = p;
+        }
+        if let Ok(p) = std::env::var("BABELCRAFT_TEST_WHISPER_MODEL") {
+            cfg.asr.model_path = p;
+        }
+        cfg.tools.keep_temp_files = true;
+        let dir = std::path::absolute("target/e2e/file").unwrap();
+        std::fs::create_dir_all(&dir).unwrap();
+        let stem = input.file_stem().unwrap().to_string_lossy().to_string();
+        let output = dir.join(format!("{stem}.ja.mp4"));
+        let _ = std::fs::remove_file(&output);
+        println!("input {}\noutput {}\nsettings: ocr={} asr={:?} translator={:?} voice={:?}", input.display(), output.display(), cfg.ocr.enabled, cfg.asr.engine, cfg.translation.backend, cfg.tts.backend);
+        let (tx, rx) = crossbeam_channel::unbounded();
+        let rep = Reporter::new(tx, std::sync::Arc::new(|| {}));
+        let t0 = Instant::now();
+        let handle = spawn(Job { input, output: output.clone(), cfg }, rep, CancelToken::default());
+        let mut result = None;
+        let mut last_tick = Instant::now();
+        loop {
+            match rx.recv_timeout(std::time::Duration::from_millis(500)) {
+                Ok(Msg::Log(_, t)) => println!("[{:6.1}s]   {t}", t0.elapsed().as_secs_f32()),
+                Ok(Msg::StageStart(s)) => println!("[{:6.1}s] ▶ {}", t0.elapsed().as_secs_f32(), s.label()),
+                Ok(Msg::StageProgress(f)) => {
+                    if last_tick.elapsed().as_secs() >= 10 {
+                        println!("[{:6.1}s]     {:.0}%", t0.elapsed().as_secs_f32(), f * 100.0);
+                        last_tick = Instant::now();
+                    }
+                }
+                Ok(Msg::Finished(p)) => {
+                    result = Some(Ok(p));
+                    break;
+                }
+                Ok(Msg::Failed(e)) => {
+                    result = Some(Err(e));
+                    break;
+                }
+                Ok(Msg::Cancelled) => break,
+                Ok(_) => {}
+                Err(crossbeam_channel::RecvTimeoutError::Timeout) => {
+                    if handle.is_finished() {
+                        break;
+                    }
+                }
+                Err(_) => break,
+            }
+        }
+        let joined = handle.join();
+        println!("job ended after {:.1} s; worker thread {}", t0.elapsed().as_secs_f32(), if joined.is_ok() { "ended normally" } else { "PANICKED" });
+        match result {
+            Some(Ok(p)) => println!("FINISHED: {}", p.display()),
+            Some(Err(e)) => panic!("JOB FAILED: {e}"),
+            None => panic!("the job ended without reporting a result (worker thread panicked: {})", joined.is_err()),
+        }
+    }
+
+    /// Writes every on-screen text interval the OCR finds in a video to target/e2e/file/ocr.tsv.
+    /// Run with: BABELCRAFT_DATA_DIR=target/testdata BABELCRAFT_TEST_INPUT=<video>
+    ///           cargo test ocr_dump -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn ocr_dump() {
+        let input = std::path::absolute(std::env::var("BABELCRAFT_TEST_INPUT").expect("set BABELCRAFT_TEST_INPUT")).unwrap();
+        let cfg = Config::default();
+        let cancel = CancelToken::default();
+        let info = video::probe(&cfg, &input, &cancel).unwrap();
+        let dir = std::path::absolute("target/e2e/file").unwrap();
+        std::fs::create_dir_all(&dir).unwrap();
+        let (tx, _rx) = crossbeam_channel::unbounded();
+        let rep = Reporter::new(tx, std::sync::Arc::new(|| {}));
+        let t0 = Instant::now();
+        let v = scan_text(&cfg, &input, &info, &dir, &rep, &cancel).unwrap();
+        let mut out = String::from("start\tend\tx\ty\tw\th\ttext\n");
+        for i in &v {
+            out.push_str(&format!("{:.1}\t{:.1}\t{:.0}\t{:.0}\t{:.0}\t{:.0}\t{}\n", i.start, i.end, i.bbox.x, i.bbox.y, i.bbox.w, i.bbox.h, i.english));
+        }
+        std::fs::write(dir.join("ocr.tsv"), out).unwrap();
+        println!("{} intervals in {:.1} s → target/e2e/file/ocr.tsv", v.len(), t0.elapsed().as_secs_f32());
+    }
+
+    #[test]
+    fn boxes_only_for_japanese() {
+        assert!(has_japanese("章やメニューを追加する"));
+        assert!(has_japanese("ｱｲｳ"));
+        assert!(!has_japanese("EDVC.UK.Com"));
+        assert!(!has_japanese("Bride Submenu"));
+        assert!(!has_japanese(""));
+    }
 
     #[test]
     fn subtitle_names() {

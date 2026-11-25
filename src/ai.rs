@@ -217,11 +217,22 @@ pub fn ollama_pull(url: &str, model: &str, cancel: &CancelToken, progress: &mut 
 
 /// Models already in Ollama (None when Ollama isn't running).
 pub fn ollama_models(url: &str) -> Option<Vec<String>> {
-    let agent = http_agent(2);
+    ollama_models_with_size(url).map(|v| v.into_iter().map(|(n, _)| n).collect())
+}
+
+/// Models already in Ollama with their size in bytes (None when Ollama isn't running).
+pub fn ollama_models_with_size(url: &str) -> Option<Vec<(String, u64)>> {
+    let agent = http_agent(3);
     let mut r = agent.get(format!("{}/api/tags", url.trim().trim_end_matches('/'))).call().ok()?;
     if !r.status().is_success() {
         return None;
     }
     let v: Value = serde_json::from_str(&read_body_string(&mut r).ok()?).ok()?;
-    Some(v["models"].as_array()?.iter().filter_map(|m| m["name"].as_str().map(String::from)).collect())
+    Some(
+        v["models"]
+            .as_array()?
+            .iter()
+            .filter_map(|m| Some((m["name"].as_str()?.to_string(), m["size"].as_u64().unwrap_or(0))))
+            .collect(),
+    )
 }

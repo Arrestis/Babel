@@ -448,6 +448,16 @@ fn download_once(url: &str, part: &Path, cancel: &CancelToken, progress: &mut im
     Ok(())
 }
 
+/// Short, stable fingerprint of a text (FNV-1a), for naming saved files.
+pub fn short_hash(s: &str) -> String {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for b in s.as_bytes() {
+        h ^= *b as u64;
+        h = h.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    format!("{h:016x}")
+}
+
 pub fn fmt_duration(secs: f64) -> String {
     let s = secs.max(0.0).round() as u64;
     if s >= 3600 { format!("{}:{:02}:{:02}", s / 3600, (s / 60) % 60, s % 60) } else { format!("{:02}:{:02}", s / 60, s % 60) }

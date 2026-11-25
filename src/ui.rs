@@ -215,6 +215,16 @@ pub struct BabelApp {
     model_list: Vec<String>,
     model_list_err: String,
     ollama_pull_name: String,
+
+    /// Test switches (environment variables, for reproducing problems):
+    /// BABELCRAFT_TEST_AUTOSTART=1 starts a job with the saved files right after the splash,
+    /// BABELCRAFT_TEST_MINIMIZE=<seconds> minimises the window that long after the start,
+    /// BABELCRAFT_TEST_EXIT_WHEN_DONE=1 closes the app when the job ends.
+    test_autostart: bool,
+    test_minimize_after: Option<f32>,
+    test_exit_when_done: bool,
+    test_job_started: Option<Instant>,
+    test_minimized: bool,
 }
 
 const WHISPER_MODELS: [(&str, &str); 5] = [
@@ -278,6 +288,11 @@ impl BabelApp {
             model_list: Vec::new(),
             model_list_err: String::new(),
             ollama_pull_name: "qwen2.5:7b".into(),
+            test_autostart: std::env::var("BABELCRAFT_TEST_AUTOSTART").is_ok_and(|v| v == "1"),
+            test_minimize_after: std::env::var("BABELCRAFT_TEST_MINIMIZE").ok().and_then(|v| v.parse().ok()),
+            test_exit_when_done: std::env::var("BABELCRAFT_TEST_EXIT_WHEN_DONE").is_ok_and(|v| v == "1"),
+            test_job_started: None,
+            test_minimized: false,
         };
         app.log(LogLevel::Info, format!("BabelCraft {} ready. Settings: {}", env!("CARGO_PKG_VERSION"), config::config_file().display()));
         app.log(LogLevel::Info, "Silent mode: nothing is ever played through your speakers.".into());
@@ -295,6 +310,16 @@ impl BabelApp {
         }
         if self.logs.len() > 5000 {
             self.logs.drain(..1000);
+        }
+        // Also kept in the log file (not for screenshot runs).
+        if self.screenshot.is_none() {
+            let tag = match level {
+                LogLevel::Info => "",
+                LogLevel::Ok => "ok: ",
+                LogLevel::Warn => "WARNING: ",
+                LogLevel::Error => "ERROR: ",
+            };
+            crate::logfile::append(&format!("{tag}{text}"));
         }
     }
 
@@ -878,6 +903,7 @@ impl BabelApp {
             let ctx = ctx.clone();
             std::thread::spawn(move || {
                 let r = crate::translate::Translator::new(&cfg)
+                    .without_memory()
                     .test(&CancelToken::default())
                     .map(|s| format!("→ 「{s}」"))
                     .unwrap_or_else(|e| format!("× {e:#}"));
@@ -928,6 +954,8 @@ impl BabelApp {
                     ui.label(tr("Ignore text shown less than"));
                     ui.add(egui::DragValue::new(&mut o.min_duration_ms).range(0..=10_000).speed(50).suffix(" ms"));
                 });
+                ui.add(egui::Slider::new(&mut o.min_text_height_percent, 0.0..=8.0).fixed_decimals(1).suffix(" %").text(tr("smallest text size")));
+                hint(ui, tr("Smaller lines (menus, buttons and labels in screen recordings) are left out. 0 keeps everything."));
                 ui.horizontal(|ui| {
                     ui.label(tr("Layout mode"));
                     egui::ComboBox::from_id_salt("psm").selected_text(tr(psm_label(o.psm))).show_ui(ui, |ui| {
@@ -1864,6 +1892,34 @@ impl BabelApp {
         }
     }
 
+    /// Test switches for reproducing problems in the real window (see the struct fields).
+    fn test_switches(&mut self, ctx: &egui::Context) {
+        if self.test_autostart && self.test_job_started.is_none() && self.started.elapsed() > Duration::from_millis(800) {
+            self.test_job_started = Some(Instant::now());
+            self.log(LogLevel::Info, "(test) starting the job automatically".into());
+            self.start_job(ctx);
+        }
+        let Some(t0) = self.test_job_started else { return };
+        if let Some(after) = self.test_minimize_after {
+            if !self.test_minimized && t0.elapsed().as_secs_f32() >= after {
+                self.test_minimized = true;
+                self.log(LogLevel::Info, "(test) minimising the window".into());
+                ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(true));
+            }
+        }
+        if self.test_exit_when_done && self.run.is_none() && !matches!(self.outcome, Outcome::None) {
+            let summary = match &self.outcome {
+                Outcome::Finished { path, secs } => format!("(test) RESULT: finished in {secs:.0} s: {}", path.display()),
+                Outcome::Failed(e) => format!("(test) RESULT: failed: {e}"),
+                Outcome::Cancelled => "(test) RESULT: cancelled".into(),
+                Outcome::None => String::new(),
+            };
+            crate::logfile::append(&summary);
+            self.test_exit_when_done = false;
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
+    }
+
     fn handle_screenshot(&mut self, ctx: &egui::Context) {
         let Some(s) = self.screenshot.as_mut() else { return };
         ctx.request_repaint();
@@ -1903,13 +1959,20 @@ impl BabelApp {
 }
 
 impl eframe::App for BabelApp {
+    /// Runs before every frame AND while the window is minimised or hidden (when `ui` isn't
+    /// called): the job's messages, the taskbar title, the log file and the end of the job are
+    /// handled here, so minimising BabelCraft never freezes or loses track of a job.
+    fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.poll(ctx);
+        self.test_switches(ctx);
+    }
+
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
         self.frame += 1;
         // Japanese interface needs a Japanese-capable font; without one, stay in English.
         crate::i18n::set_japanese(self.cfg.ui_language == UiLanguage::Japanese && self.has_cjk_ui_font);
         self.handle_screenshot(&ctx);
-        self.poll(&ctx);
 
         // Drag & drop a video anywhere on the window.
         let dropped: Vec<PathBuf> = ctx.input(|i| i.raw.dropped_files.iter().map(|f| f.path().to_path_buf()).filter(|p| !p.as_os_str().is_empty()).collect());

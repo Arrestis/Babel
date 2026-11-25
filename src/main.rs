@@ -14,6 +14,7 @@ mod checks;
 mod config;
 mod fonts;
 mod i18n;
+mod logfile;
 mod ocr;
 mod overlay;
 mod pipeline;
@@ -31,6 +32,8 @@ use std::path::PathBuf;
 pub const ICON_PNG: &[u8] = include_bytes!("../assets/icon.png");
 
 fn main() -> eframe::Result<()> {
+    // Internal errors are written to the log file before the app closes.
+    logfile::install_panic_hook();
     let mut screenshot: Option<PathBuf> = None;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
@@ -77,7 +80,8 @@ fn main() -> eframe::Result<()> {
 
     let mut options = eframe::NativeOptions { viewport, ..Default::default() };
 
-    if screenshot.is_some() {
+    let test_run = std::env::var("BABELCRAFT_TEST_AUTOSTART").is_ok_and(|v| v == "1");
+    if screenshot.is_some() || test_run {
         // Never steal focus from what the person is doing.
         options.viewport = options.viewport.with_active(false);
         #[cfg(target_os = "windows")]
