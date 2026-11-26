@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! Finds a font that really contains Japanese glyphs (no □□□ tofu), on every OS.
 
 use ab_glyph::{Font, FontRef};

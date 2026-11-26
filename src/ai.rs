@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! Catalogue of the local and online AI services BabelCraft can use for translation,
 //! speech recognition and the Japanese voice, plus small helpers (opening a web page,
 //! listing a service's models, downloading an Ollama model).

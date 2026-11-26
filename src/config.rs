@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! Persisted settings (TOML in the platform config directory).
 //!
 //! Windows: %APPDATA%\BabelCraft\babelcraft\config\config.toml

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! The background job: Extract → OCR → Whisper → Translate → Voice → Render.
 //! Runs on its own thread; talks to the UI only through `Reporter` messages.
 

@@ -30,8 +30,10 @@ The app never plays audio or shows a preview, so you can minimise it and keep wo
 ## Quick start
 
 1. Download the file for your system from **Releases**:
-   - Windows: `BabelCraft-x.y.z-windows-x64.zip` (or `x86` / `arm64`) → unzip → `BabelCraft.exe`
+   - Windows installer: `BabelCraft-x.y.z-windows-x64.msi` (or `x86` / `arm64`) → double-click → BabelCraft is installed in *Program Files* with Start menu and desktop shortcuts; uninstall it from *Settings → Apps*. Installing a newer version replaces the old one; your settings and downloads are kept.
+   - Windows without installing: `BabelCraft-x.y.z-windows-x64.zip` (or `x86` / `arm64`) → unzip → `BabelCraft.exe`
      (Windows on ARM: use `arm64`; Windows 11 on ARM also runs the `x64` build, Windows 10 on ARM the `x86` build)
+   - The Windows files aren't code-signed yet, so Windows may show *"Windows protected your PC"*: press **More info → Run anyway**.
    - Linux: `.AppImage` (any distro: `chmod +x` and run), `.deb` (Debian/Ubuntu/Mint/Pop!_OS), or `.tar.gz` (`./install.sh` installs for your user)
    - macOS: `BabelCraft-x.y.z-macos-universal.dmg` → drag to Applications → first launch: right-click → **Open**
    - `-whisper` / `-metal` variants have Whisper built in (`metal` = GPU on Apple Silicon).
@@ -159,6 +161,13 @@ GPU Whisper: `--features vulkan` (Windows/Linux, Vulkan SDK), `--features cuda` 
 - Windows builds use Windows' own secure-connection support (SChannel), so no extra C compiler is needed for any of the three.
 - For `--features whisper`: `winget install Kitware.CMake LLVM.LLVM`
 - The icon is embedded into the `.exe` automatically (`build.rs`).
+- Installer (`.msi`, WiX Toolset 5, needs the .NET SDK):
+  ```powershell
+  dotnet tool install --global wix --version 5.0.2
+  wix extension add -g WixToolset.UI.wixext/5.0.2
+  powershell -ExecutionPolicy Bypass -File packaging/windows/make-msi.ps1 -Exe target/release/babelcraft.exe -Arch x64
+  ```
+  → `dist/BabelCraft-x.y.z-windows-x64.msi` (use `-Arch x86` / `-Arch arm64` with the matching `.exe`). The installer shows the GPL licence, lets you pick the folder, and adds Start menu and desktop shortcuts.
 - 32-bit BabelCraft on 64-bit Windows uses the 64-bit FFmpeg, AI brain and VOICEVOX downloads; on a true 32-bit Windows install FFmpeg yourself and use an online or LAN AI service.
 
 ### Linux (any distro)
@@ -202,7 +211,7 @@ babelcraft --version
    ```
 2. **Actions** builds every platform on each push (`.github/workflows/release.yml`).
 3. To publish downloads: `git tag v1.1.2 && git push origin v1.1.2` → a Release is created with:
-   Windows x64 / x86 / ARM64 / x64-whisper `.zip`, Linux x86_64 / aarch64 `.tar.gz` + `.deb` + `.AppImage` (+ x86_64-whisper), macOS universal `.dmg` (+ `-metal`).
+   Windows x64 / x86 / ARM64 / x64-whisper `.msi` installers and `.zip` files, Linux x86_64 / aarch64 `.tar.gz` + `.deb` + `.AppImage` (+ x86_64-whisper), macOS universal `.dmg` (+ `-metal`).
 
 ## Project layout
 
@@ -231,7 +240,7 @@ src/config.rs           persisted settings (serde + TOML)
 src/checks.rs           startup checks with one-click fixes
 src/util.rs             silent child processes, cancel token, resumable downloads, messages
 src/logfile.rs          the log file and the internal-error recorder
-packaging/              Linux .desktop/AppImage/install, macOS Info.plist/.app/.dmg
+packaging/              Windows .msi (WiX), Linux .desktop/AppImage/install, macOS Info.plist/.app/.dmg
 ```
 
 Run the tests with `cargo test`. The download tests are opt-in (they fetch gigabytes into a scratch folder):
@@ -248,4 +257,14 @@ Run the tests with `cargo test`. The download tests are opt-in (they fetch gigab
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+BabelCraft is free software: you can redistribute it and/or modify it under the terms of the
+**GNU General Public License** as published by the Free Software Foundation, either **version 3**
+of the License, or (at your option) any later version (`GPL-3.0-or-later`).
+
+It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See [LICENSE](LICENSE) for
+the full text.
+
+Copyright (C) 2026 BabelCraft contributors. Versions up to and including 1.1.1 were released under
+the MIT licence. The Rust libraries BabelCraft is built from use GPL-compatible licences (MIT,
+Apache-2.0, BSD, ISC, Zlib and similar).

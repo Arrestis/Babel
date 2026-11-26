@@ -13,5 +13,6 @@
     <key>LSMinimumSystemVersion</key><string>11.0</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>LSApplicationCategoryType</key><string>public.app-category.video</string>
+    <key>NSHumanReadableCopyright</key><string>Copyright (C) 2026 BabelCraft contributors. Free software under the GNU GPL v3 or later.</string>
 </dict>
 </plist>

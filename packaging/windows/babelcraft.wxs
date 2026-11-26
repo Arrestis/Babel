@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  BabelCraft Windows installer (.msi), built with the WiX Toolset 5.
+  Build it with:  powershell -File packaging/windows/make-msi.ps1 -Exe target/release/babelcraft.exe -Arch x64
+  SPDX-License-Identifier: GPL-3.0-or-later
+
+  Installs BabelCraft.exe (plus the licence and README) to Program Files\BabelCraft, adds Start menu
+  and desktop shortcuts, and an entry in Settings > Apps for uninstalling. Installing a newer (or
+  another variant of the same) version replaces the old one. BabelCraft's settings, downloaded
+  tools and models stay in the user's own folders and are kept on uninstall.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="BabelCraft"
+           Manufacturer="BabelCraft contributors"
+           Version="$(var.Version)"
+           UpgradeCode="{5BB8E799-55D2-49E8-9EAD-4200CC07E278}"
+           Language="1033"
+           Scope="perMachine"
+           Compressed="yes">
+    <SummaryInformation Description="BabelCraft $(var.Version) - English to Japanese video translator"
+                        Manufacturer="BabelCraft contributors" />
+
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="A newer version of BabelCraft is already installed. Uninstall it first (Settings > Apps) to install this one." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <!-- Settings > Apps entry -->
+    <Icon Id="BabelCraft.ico" SourceFile="$(var.IconFile)" />
+    <Property Id="ARPPRODUCTICON" Value="BabelCraft.ico" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/Arrestis/Babel" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/Arrestis/Babel#readme" />
+    <Property Id="ARPCOMMENTS" Value="Translates English videos (on-screen text and speech) into Japanese. Free software under the GNU GPL v3 or later." />
+
+    <!-- Wizard: welcome, licence (GPL), install folder, install, finish - in BabelCraft's colours -->
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
+    <WixVariable Id="WixUIBannerBmp" Value="$(var.BannerBmp)" />
+    <WixVariable Id="WixUIDialogBmp" Value="$(var.DialogBmp)" />
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="BabelCraft" />
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+    <StandardDirectory Id="DesktopFolder" />
+
+    <Feature Id="BabelCraft" Title="BabelCraft">
+      <Component Id="BabelCraftExe" Directory="INSTALLFOLDER">
+        <File Id="BabelCraftExe" Source="$(var.ExeFile)" Name="BabelCraft.exe" KeyPath="yes">
+          <Shortcut Id="StartMenuShortcut" Directory="ProgramMenuFolder" Name="BabelCraft"
+                    Description="English to Japanese video translator" WorkingDirectory="INSTALLFOLDER"
+                    Icon="BabelCraft.ico" Advertise="yes" />
+          <Shortcut Id="DesktopShortcut" Directory="DesktopFolder" Name="BabelCraft"
+                    Description="English to Japanese video translator" WorkingDirectory="INSTALLFOLDER"
+                    Icon="BabelCraft.ico" Advertise="yes" />
+        </File>
+      </Component>
+      <Component Id="Licence" Directory="INSTALLFOLDER">
+        <File Id="LicenceTxt" Source="$(var.LicenseFile)" Name="LICENSE.txt" KeyPath="yes" />
+      </Component>
+      <Component Id="Readme" Directory="INSTALLFOLDER">
+        <File Id="ReadmeMd" Source="$(var.ReadmeFile)" Name="README.md" KeyPath="yes" />
+      </Component>
+    </Feature>
+  </Package>
+</Wix>

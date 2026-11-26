@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! The offline AI brain: llama.cpp's `llama-server` plus an open AI model (GGUF file) that
 //! BabelCraft downloads into its own folder and runs on this computer. No account, no key,
 //! and no internet once it is downloaded. BabelCraft talks to it like any OpenAI-compatible server.

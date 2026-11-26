@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! Japanese text-to-speech: VOICEVOX (downloaded and started automatically), OpenAI-compatible
 //! (/audio/speech: OpenAI voices, Kokoro-FastAPI...), the computer's own Japanese voice,
 //! edge-tts and Piper. Nothing is ever played back — audio only goes to files.

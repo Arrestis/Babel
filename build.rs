@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Embeds the BabelCraft icon and version info into the Windows executable.
 // On Linux and macOS the icon is set at runtime (window icon) and by the
 // packaging files in `packaging/`.
@@ -11,7 +12,7 @@ fn main() {
         res.set_icon("assets/icon.ico");
         res.set("ProductName", "BabelCraft");
         res.set("FileDescription", "BabelCraft - English to Japanese video translator");
-        res.set("LegalCopyright", "MIT License");
+        res.set("LegalCopyright", "Copyright (C) 2026 BabelCraft contributors. GNU GPL v3 or later.");
         if let Err(e) = res.compile() {
             // Never fail the build just because the resource compiler is missing.
             println!("cargo:warning=Could not embed Windows icon: {e}");

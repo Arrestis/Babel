@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! Helper servers BabelCraft runs by itself — the offline AI brain (llama.cpp) and the
 //! VOICEVOX voice engine. They start hidden (no window, no sound), BabelCraft waits until
 //! they answer, and stops them again when the job is done or the app closes.

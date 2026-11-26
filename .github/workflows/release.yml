@@ -50,10 +50,21 @@ jobs:
           Copy-Item "target/${{ matrix.target }}/release/babelcraft.exe" "dist/$name/BabelCraft.exe"
           Copy-Item README.md, LICENSE "dist/$name/"
           Compress-Archive -Path "dist/$name/*" -DestinationPath "dist/$name.zip" -Force
+      - name: Installer (.msi)
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          if ($LASTEXITCODE -ne 0) { dotnet tool update --global wix --version 5.0.2 }
+          $env:PATH = "$env:USERPROFILE\.dotnet\tools;$env:PATH"
+          wix extension add -g WixToolset.UI.wixext/5.0.2
+          $arch = '${{ matrix.label }}'.Split('-')[0]
+          ./packaging/windows/make-msi.ps1 -Exe "target/${{ matrix.target }}/release/babelcraft.exe" -Arch $arch -Label '${{ matrix.label }}' -Out dist
       - uses: actions/upload-artifact@v4
         with:
           name: windows-${{ matrix.label }}
-          path: dist/*.zip
+          path: |
+            dist/*.zip
+            dist/*.msi
 
   linux:
     name: Linux ${{ matrix.label }}

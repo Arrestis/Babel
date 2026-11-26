@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! Interface language (English / 日本語) for buttons, menus and labels.
 //! Every piece of interface text is written in English and passed through `tr`,
 //! which returns the Japanese version when Japanese is selected.
@@ -444,6 +445,13 @@ fn ja(en: &str) -> Option<&'static str> {
             "ここまでにダウンロードした分は残してあります。次回はその続きから再開します。"
         }
         "Please wait…" => "お待ちください…",
+        // About
+        "About BabelCraft" => "BabelCraft について",
+        "Free software: you may share and change it under the GNU General Public License, version 3 or (at your option) any later version. It comes with NO WARRANTY." => {
+            "フリーソフトウェアです。GNU 一般公衆利用許諾書（GPL）バージョン 3、または（お好みで）それ以降のバージョンの条件のもとで、再配布や改変ができます。無保証です。"
+        }
+        "Licence (GNU GPL v3) ↗" => "ライセンス (GNU GPL v3) ↗",
+        "Source code ↗" => "ソースコード ↗",
         "Time left (download)" => "残り時間（ダウンロード）",
         // Installer steps
         "Unpacking FFmpeg" => "FFmpeg を展開中",

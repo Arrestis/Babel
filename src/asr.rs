@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! English speech recognition with Whisper: whisper-rs in-process, the whisper.cpp CLI, or an
 //! online / local Whisper API (OpenAI, Groq, Speaches... — the /audio/transcriptions endpoint).
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! English → Japanese translation: BabelCraft's offline AI brain, Ollama, any OpenAI-compatible
 //! service (OpenAI, Gemini, OpenRouter, Groq, DeepSeek, Mistral, LM Studio, Jan...), Anthropic
 //! Claude, DeepL or LibreTranslate.

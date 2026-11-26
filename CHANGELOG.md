@@ -2,6 +2,10 @@
 
 ## 1.1.2
 
+### New
+- **Windows installer (`.msi`)** for x64, x86, ARM64 and x64 with Whisper built in: a standard setup wizard in BabelCraft's colours (welcome, licence, install folder), installs to *Program Files* with Start menu and desktop shortcuts, uninstalls from *Settings → Apps*, and replaces an older version when you install a newer one. The `.zip` files are still there for running without installing.
+- **Licence: GNU General Public License v3 or later** (`GPL-3.0-or-later`); earlier versions were MIT. *Settings → About BabelCraft* shows the version, the licence and links to the licence text and the source code.
+
 ### Improved
 - **First-time downloads no longer look stuck.** While a job downloads what it needs (almost 5 GB with the offline AI brain and VOICEVOX), the progress screen shows *One-time setup · download 2 of 3*, the file being fetched, how much has arrived, the speed and the time left, instead of an *Extracting Media* bar that barely moved. The taskbar title shows the download percentage too.
 - The time left for the translation itself no longer counts the download time.

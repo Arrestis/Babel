@@ -1,3 +1,19 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+//
+// BabelCraft — English to Japanese video translator.
+// Copyright (C) 2026 BabelCraft contributors
+//
+// This program is free software: you can redistribute it and/or modify it under the terms of
+// the GNU General Public License as published by the Free Software Foundation, either version 3
+// of the License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+// without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+// See the GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along with this program
+// (the LICENSE file). If not, see <https://www.gnu.org/licenses/>.
+
 //! BabelCraft — translate English videos (on-screen text + speech) into Japanese.
 //!
 //! Usage:
@@ -60,7 +76,10 @@ fn main() -> eframe::Result<()> {
             "--help" | "-h" => {
                 println!(
                     "BabelCraft {} — English → Japanese video translator\n\n\
-                     Usage: babelcraft [--lang en|ja] [--page translate|downloads] [--screenshot <file.png>]",
+                     Usage: babelcraft [--lang en|ja] [--page translate|downloads] [--screenshot <file.png>]\n\n\
+                     Copyright (C) 2026 BabelCraft contributors. Free software under the GNU GPL v3 or later\n\
+                     <https://www.gnu.org/licenses/gpl-3.0.html>; there is NO WARRANTY.\n\
+                     Source code: https://github.com/Arrestis/Babel",
                     env!("CARGO_PKG_VERSION")
                 );
                 return Ok(());
@@ -81,6 +100,7 @@ fn main() -> eframe::Result<()> {
     let mut options = eframe::NativeOptions { viewport, ..Default::default() };
 
     let test_run = std::env::var("BABELCRAFT_TEST_AUTOSTART").is_ok_and(|v| v == "1");
+    let mut scratch_state: Option<PathBuf> = None;
     if screenshot.is_some() || test_run {
         // Never steal focus from what the person is doing.
         options.viewport = options.viewport.with_active(false);
@@ -95,13 +115,22 @@ fn main() -> eframe::Result<()> {
                 builder.with_activate_ignoring_other_apps(false);
             }));
         }
-        // Fresh state so the picture is reproducible.
+        // Fresh state so the picture is reproducible: a throwaway file for the window layout
+        // (panel sizes, scroll positions), so the person's own layout is neither read nor changed.
         options.persist_window = false;
+        let state = std::env::temp_dir().join(format!("babelcraft-ui-state-{}.ron", std::process::id()));
+        let _ = std::fs::remove_file(&state);
+        options.persistence_path = Some(state.clone());
+        scratch_state = Some(state);
     }
 
-    eframe::run_native(
+    let result = eframe::run_native(
         "BabelCraft",
         options,
         Box::new(move |cc| Ok(Box::new(ui::BabelApp::new(cc, screenshot)))),
-    )
+    );
+    if let Some(state) = scratch_state {
+        let _ = std::fs::remove_file(state);
+    }
+    result
 }

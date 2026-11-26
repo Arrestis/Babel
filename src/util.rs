@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! Shared helpers: cancellation, silent child processes, messages to the UI, downloads.
 
 use anyhow::{Context, Result, anyhow, bail};

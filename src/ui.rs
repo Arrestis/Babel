@@ -1,4 +1,5 @@
-﻿//! The BabelCraft window: splash, file pickers, settings, multi-stage progress, setup checks,
+// SPDX-License-Identifier: GPL-3.0-or-later
+//! The BabelCraft window: splash, file pickers, settings, multi-stage progress, setup checks,
 //! the "AI models & downloads" page and the log.
 
 use crate::ai::{self, PROVIDERS};
@@ -814,6 +815,8 @@ impl BabelApp {
                 });
                 ui.label(RichText::new(tr("Saved automatically.")).size(12.0).color(MUTED));
                 ui.add_space(6.0);
+                // Screenshot mode only: BABELCRAFT_SHOT_ABOUT=1 photographs the About section.
+                let shot_about = self.screenshot.is_some() && std::env::var("BABELCRAFT_SHOT_ABOUT").is_ok_and(|v| v == "1");
                 egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
                     ui.add_enabled_ui(!running, |ui| {
                         self.settings_translation(ui);
@@ -823,9 +826,37 @@ impl BabelApp {
                         self.settings_tts(ui);
                         self.settings_tools(ui);
                     });
+                    // Always usable, even while a job runs.
+                    settings_about(ui, shot_about);
+                    if shot_about {
+                        ui.scroll_to_cursor(Some(Align::BOTTOM));
+                    }
                 });
             });
     }
+}
+
+/// Version, licence and source code (the GPL's "appropriate legal notices").
+fn settings_about(ui: &mut egui::Ui, open: bool) {
+    section(ui, tr("About BabelCraft"), open, |ui| {
+        ui.label(RichText::new(format!("BabelCraft {}", env!("CARGO_PKG_VERSION"))).strong().color(CREAM));
+        hint(ui, "Copyright (C) 2026 BabelCraft contributors");
+        ui.label(
+            RichText::new(tr(
+                "Free software: you may share and change it under the GNU General Public License, version 3 or (at your option) any later version. It comes with NO WARRANTY.",
+            ))
+            .size(12.5)
+            .color(CREAM),
+        );
+        ui.horizontal_wrapped(|ui| {
+            if link_button(ui, tr("Licence (GNU GPL v3) ↗")) {
+                ai::open_url("https://www.gnu.org/licenses/gpl-3.0.html");
+            }
+            if link_button(ui, tr("Source code ↗")) {
+                ai::open_url("https://github.com/Arrestis/Babel");
+            }
+        });
+    });
 }
 
 // -------------------------------------------------------------------- settings

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! Draws Japanese text over the original English text boxes (semi-transparent box,
 //! auto-fitted CJK text) and writes a timed overlay stream FFmpeg can composite.
 

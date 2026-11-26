@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! A log file next to BabelCraft's other data, so problems can be looked at afterwards:
 //! every line of the log console, and the details of any internal error ("panic") —
 //! written before the app closes, which otherwise leaves no trace.

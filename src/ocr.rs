@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! On-screen English text detection (Tesseract) and de-duplication into timed intervals.
 
 use crate::config::{Config, OcrSampling};

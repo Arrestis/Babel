@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! Self-contained setup: BabelCraft finds or downloads its own helper tools and models
 //! (FFmpeg/FFprobe, whisper.cpp CLI, Whisper model, OCR models, Japanese font) into its
 //! data folder, so nothing has to be installed by hand.

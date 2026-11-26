@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! VOICEVOX — free, offline Japanese voices. BabelCraft can download the VOICEVOX engine into
 //! its own folder (or use an installed VOICEVOX app) and starts it hidden when a job needs a
 //! voice. Nothing is ever played through the speakers; audio only goes to files.

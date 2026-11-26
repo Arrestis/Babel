@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! FFmpeg / FFprobe wrappers: probing, audio extraction, frame streaming and final render.
 
 use crate::config::Config;

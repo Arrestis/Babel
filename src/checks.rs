@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! Startup checks: tells the person what is ready and what BabelCraft can set up by itself.
 
 use crate::config::{Config, OcrEngineKind, TranslationBackend};

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 //! Regenerates the icon files in `assets/` from `assets/icon-source.png`.
 //!
 //!     cargo run --example make_icons
