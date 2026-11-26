@@ -324,18 +324,19 @@ impl Default for ToolsConfig {
     }
 }
 
-/// Language of BabelCraft's own buttons and menus.
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Default)]
-pub enum UiLanguage {
-    #[default]
-    English,
-    Japanese,
+/// Reads the interface language: a code from `langs::LANGUAGES` ("en", "ja", "es"…). Settings
+/// from version 1.1 say "English" or "Japanese"; anything unknown becomes English.
+fn ui_language_from<'de, D: serde::Deserializer<'de>>(d: D) -> Result<String, D::Error> {
+    let s = String::deserialize(d)?;
+    Ok(crate::langs::normalize(&s).unwrap_or("en").to_string())
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, Default)]
 #[serde(default)]
 pub struct Config {
-    pub ui_language: UiLanguage,
+    /// Language of BabelCraft's own buttons and menus (a language code; empty means English).
+    #[serde(deserialize_with = "ui_language_from")]
+    pub ui_language: String,
     pub last_input: String,
     pub last_output: String,
     /// API keys of online services, by service id ("openai", "anthropic", "gemini", "deepl"...).
@@ -403,12 +404,16 @@ impl Config {
     pub fn load() -> Self {
         let mut cfg = Self::load_file();
         cfg.normalize();
-        match std::env::var("BABELCRAFT_LANG").ok().as_deref().map(str::to_ascii_lowercase).as_deref() {
-            Some("ja" | "jp" | "japanese") => cfg.ui_language = UiLanguage::Japanese,
-            Some("en" | "english") => cfg.ui_language = UiLanguage::English,
-            _ => {}
+        // `--lang <code>` (or BABELCRAFT_LANG) picks the interface language for this session.
+        if let Some(code) = std::env::var("BABELCRAFT_LANG").ok().as_deref().and_then(crate::langs::normalize) {
+            cfg.ui_language = code.to_string();
         }
         cfg
+    }
+
+    /// The interface language's code ("en" when none is set).
+    pub fn ui_lang(&self) -> &str {
+        if self.ui_language.trim().is_empty() { "en" } else { self.ui_language.trim() }
     }
 
     fn load_file() -> Self {
@@ -529,6 +534,23 @@ mod tests {
         let mut cfg: Config = toml::from_str(custom).unwrap();
         cfg.normalize();
         assert_eq!(cfg.translation.provider, "groq");
+    }
+
+    #[test]
+    fn interface_language_settings_carry_over() {
+        // Version 1.1 wrote the language by name.
+        let cfg: Config = toml::from_str("ui_language = \"Japanese\"\n").unwrap();
+        assert_eq!(cfg.ui_lang(), "ja");
+        let cfg: Config = toml::from_str("ui_language = \"English\"\n").unwrap();
+        assert_eq!(cfg.ui_lang(), "en");
+        let cfg: Config = toml::from_str("ui_language = \"es\"\n").unwrap();
+        assert_eq!(cfg.ui_lang(), "es");
+        let cfg: Config = toml::from_str("ui_language = \"Klingon\"\n").unwrap();
+        assert_eq!(cfg.ui_lang(), "en");
+        // New settings start in English.
+        assert_eq!(Config::default().ui_lang(), "en");
+        let saved = toml::to_string(&Config { ui_language: "zh-Hans".into(), ..Default::default() }).unwrap();
+        assert_eq!(toml::from_str::<Config>(&saved).unwrap().ui_lang(), "zh-Hans");
     }
 
     #[test]

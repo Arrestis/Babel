@@ -1,0 +1,341 @@
+# BabelCraft interface text - Português (Portuguese), translated by hand.
+f249a927	BabelCraft
+12c2c4a7	Inglês → 日本語  ·  texto na tela + dublagem de voz
+7ac2b86a	Inglês → japonês  ·  texto na tela + dublagem de voz
+0d581bdc	Tradutor de vídeo inglês → 日本語
+99665e53	Tradutor de vídeo inglês → japonês
+68cc88b7	carregando
+116c2a94	● Trabalhando em segundo plano
+3787b897	● Ocioso
+4b058728	Configurações
+461471f8	Registro
+9a73db9b	Idioma
+66eac25a	Idioma da interface
+c9ea4271	Salvo automaticamente.
+4ac0e87d	Restaurar padrões
+04a57fc2	Limpar
+6aef5c37	Copiar tudo
+e1e4263c	linhas
+eaaaf67b	●
+1d833b86	1  ·  Escolha seu vídeo
+e9d74ce0	Vídeo em inglês
+7c11ee84	Salvar vídeo em japonês como
+8f0cc624	MP4, MKV, MOV ou AVI — ou arraste um arquivo para a janela
+757376db	onde o vídeo traduzido é salvo (.mp4 / .mkv / .mov)
+23b63f91	Procurar…
+54f47c20	Escolha um vídeo em inglês
+ddb01179	Salvar o vídeo em japonês
+28866588	2  ·  Traduzir para japonês
+f6df38d6	▶  Começar a traduzir
+bcf96ba5	■  Cancelar
+be98d55f	Parando…
+c5013a6b	Funciona em segundo plano, em total silêncio.
+67d9cd9f	Concluído — seu vídeo em japonês está pronto
+87e33e9f	Parou por causa de um erro
+a62b09bc	Cancelado
+73727cef	Iniciando…
+28e0532d	Pronto quando você quiser
+42cea59a	Total
+2e160bcd	Etapa
+92cdd63b	Decorrido
+f91aa552	Tempo restante
+1661fdff	Esta etapa
+201d285c	estimando…
+8a6979e4	Salvo em
+63890d31	Mostrar na pasta
+9172da18	Cancelado — todos os processos auxiliares foram encerrados.
+e4a9bc35	Modo silencioso em segundo plano — nada é reproduzido nem pré-visualizado. Minimize o BabelCraft e continue trabalhando.
+8d13c0e3	Primeiro escolha um vídeo de entrada e um arquivo de saída.
+fbaf1ee6	Extraindo mídia
+66c3806e	Lendo o texto na tela (OCR)
+05acb2e4	Transcrevendo a fala (Whisper)
+899d6f82	Traduzindo para japonês
+5652a5fb	Sintetizando a voz em japonês
+851e2700	Renderizando o vídeo final
+f2bc3d23	Verificações
+8d94ad89	Verificar de novo
+5a2c73d7	verificando…
+4da65a54	⬇  Configurar automaticamente
+bb271adb	Baixa o FFmpeg, o cérebro de IA offline, a voz VOICEVOX, modelos e fontes para a pasta do BabelCraft — nada para instalar manualmente.
+c6505380	Procurando o FFmpeg, o Tesseract, o Whisper, uma fonte japonesa, o tradutor e o mecanismo de voz…
+6964bb19	Baixar
+4b7f7705	Parar
+a07de7ca	Configurando:
+8d063a47	Baixando
+bbdf4418	FFmpeg
+7cf52b12	Leitor de texto (OCR)
+d29b285f	Fonte japonesa
+c7d2f814	Modelo do Whisper
+c02c6b89	Mecanismo do Whisper
+3dcc9590	Voz em japonês
+55d54d8f	Tradutor
+8b3655e6	O BabelCraft configura isso sozinho: clique em "Configurar automaticamente" ou apenas inicie um trabalho (é baixado no primeiro uso).
+8a85291c	Mude Configurações → Texto na tela → mecanismo para "Integrado" (nada para instalar) ou instale o Tesseract.
+4937ee8d	Instale os dados de inglês (tesseract-ocr-eng) ou mude para o mecanismo integrado.
+6b632701	Use o download do BabelCraft com o Whisper integrado ("-metal" no Mac) ou `brew install whisper-cpp`.
+d278d570	VOICEVOX: instale em voicevox.hiroshiba.jp e deixe-o aberto. Ou escolha edge-tts / Piper / um TTS compatível com OpenAI em Configurações → Voz em japonês.
+2070378a	Instale o Ollama (ollama.com), execute `ollama pull qwen2.5:7b` ou mude para o DeepL / uma API compatível com OpenAI nas Configurações.
+55805a31	Execute `ollama pull qwen2.5:7b` (ou escolha outro modelo em Configurações → Tradução).
+ee61f277	Digite uma chave de API em Configurações → Tradução (ou defina OPENAI_API_KEY).
+ff124719	Digite sua chave de API do DeepL em Configurações → Tradução (ou defina DEEPL_AUTH_KEY).
+249730cc	Tradução
+5d55a9d8	Ollama (local, offline)
+0baef3c4	API compatível com OpenAI
+175a60e9	API do DeepL
+74398dc7	URL do servidor
+72863919	URL base
+8285e8fa	Modelo
+e9efc6ec	Chave de API
+4d405ca8	Funciona totalmente offline. Experimente qwen2.5:7b, gemma2:9b ou llama3.1:8b.
+af8e4a51	OpenAI, LM Studio, servidor llama.cpp, vLLM… Sem chave, usa OPENAI_API_KEY.
+c3155622	Chaves gratuitas terminam em :fx. Sem chave, usa DEEPL_AUTH_KEY.
+3bc0cab6	Linhas por solicitação
+c00aa5ce	Estilo / glossário
+6bf8fbb6	Testar a tradução
+19d1cb65	Testando…
+00ae74ed	Mixagem de áudio
+c1611838	Substituir a voz em inglês (só japonês)
+212c5abc	Abaixar o áudio original sob a dublagem em japonês
+201aac68	volume original
+fa79499a	Abaixar o vídeo inteiro (não só durante a fala)
+0784b382	volume da dublagem
+58097c54	aceleração máx.
+83e9f7d5	Falas longas são aceleradas (até este limite) para terminar antes da próxima.
+f49be31e	Manter também o áudio em inglês como 2ª faixa
+f6393ba1	Texto na tela (OCR)
+327bea24	Traduzir o texto em inglês na tela
+0ad0f496	Só quando a imagem muda (rápido)
+a1c6f6f6	Cada amostra
+12b8f364	Amostrar a cada
+66bea3b2	sensibilidade à mudança
+84522f61	confiança mín.
+ca3d4b73	Ignorar texto exibido por menos de
+acc570d0	tamanho mínimo do texto
+ffa019e3	Escolha um modelo geral de 4–14B em Configurações → Tradução (clique em Lista) ou use o cérebro de IA offline integrado.
+45086469	Linhas menores (menus, botões e rótulos em gravações de tela) são ignoradas. 0 mantém tudo.
+9841b69a	Modo de layout
+db61155b	Mecanismo
+be1d82a5	Integrado
+d84f3165	Tesseract
+a945985f	opacidade da caixa
+126befb6	Auto
+0c940e46	detecção automática
+0fc0d8e9	3 · layout de página automático
+7fb0f48a	6 · um único bloco de texto
+3c8b4723	11 · texto esparso (vídeo)
+c44a2f35	12 · texto esparso + OSD
+2057306e	personalizado
+724ccc6a	Fala (Whisper)
+527a1b52	Transcrever e dublar o inglês falado
+53dd6ba6	O Whisper integrado precisa de uma compilação com --features whisper (veja o README).
+19dc307e	Padrão
+4e02cbb1	Usar a GPU quando disponível
+38297885	Threads de CPU (0 = auto)
+943bd539	tiny.en · 75 MB · o mais rápido
+a72fe0d0	base.en · 142 MB · recomendado
+d4e9b0d4	small.en · 466 MB · melhor
+f6ebc93e	medium.en · 1.5 GB · o melhor (lento)
+b645becd	large-v3-turbo · 1.6 GB · GPU
+05f6f560	Voz em japonês (TTS)
+00ec4476	VOICEVOX (HTTP local)
+b2512860	Compatível com OpenAI / Kokoro
+ccc764b6	edge-tts (online)
+511c9bd5	Piper (CLI local)
+242750f2	URL do mecanismo
+38460e3b	ID do locutor
+d8d2cfac	Grátis, offline e de alta qualidade. Abra o app VOICEVOX primeiro.
+27d1a499	Voz
+4d2cfde6	ex.: Kokoro-FastAPI local (voz jf_alpha) ou OpenAI (tts-1).
+011e7010	Precisa de internet (`pip install edge-tts`). ja-JP-NanamiNeural / ja-JP-KeitaNeural.
+e6334598	Modelo de voz
+852c5410	nenhum modelo escolhido
+f9cb6003	Ferramentas e saída
+ffe78236	qualidade (CRF)
+ae0ad188	Velocidade do codificador
+c216d626	Manter arquivos temporários (para depuração)
+030b947c	Arquivo de configurações:
+4814e1f4	Cérebro de IA offline do BabelCraft (integrado)
+16635ed8	Servidor llama.cpp
+a2986a6b	OpenRouter (centenas de modelos)
+adc85c3d	Outro servidor compatível com OpenAI
+cbd2d62c	tradução
+8b60ec45	tradução · reconhecimento de fala · voz
+43a23a38	tradução · reconhecimento de fala
+30f05723	Groq (Whisper muito rápido)
+aebf9e69	Servidor do Whisper neste computador (Speaches…)
+5bd0f1c4	Kokoro-FastAPI (neste computador)
+650403a8	Vozes da OpenAI (online)
+28da3881	Roda muitos modelos de IA abertos no seu computador (tradução).
+dcf43fb3	App para computador que baixa e roda modelos de IA (tradução).
+6a618244	App gratuito offline no estilo ChatGPT, com servidor integrado (tradução).
+576e209d	App gratuito de vozes japonesas com muitos personagens (voz).
+839c5457	Pequeno servidor de voz local com vozes japonesas (voz).
+7ad23e14	Programa de voz rápido e offline; precisa de um modelo de voz japonês (voz).
+a6b89890	Vozes neurais online da Microsoft, sem chave (voz).
+ede4f24c	Servidor de tradução gratuito que você mesmo pode rodar (tradução).
+c959a878	Servidor de reconhecimento de fala Whisper para o seu computador (fala).
+2bc11867	Leitor alternativo para o texto na tela (OCR).
+8c5703ff	Qwen 2.5 · 1.5B (pequeno e rápido)
+bafe9c62	Qwen 3 · 4B (recomendado)
+8b8b111a	Gemma 3 · 4B (alternativa)
+73187fe5	Qwen 2.5 · 7B (melhor qualidade)
+fad2714f	Para computadores antigos ou com 4 GB de memória. Japonês mais simples.
+6839dc74	Japonês bom e natural; roda na maioria dos computadores com 8 GB de memória.
+7af7e30c	O modelo aberto do Google; outro estilo de japonês para comparar com o Qwen.
+9e1e444a	As melhores traduções; pede 16 GB de memória ou uma placa de vídeo.
+bbc9da8e	Cérebro de IA offline
+b334b4ca	Quem traduz
+a36951fd	Neste computador — grátis, privado, offline
+55749e52	Serviços online — precisam de conta e chave de API
+0b610402	Modelo de IA
+00934d1a	Usar a placa de vídeo (mais rápido; Vulkan)
+99d1bac3	Baixado — pronto para traduzir offline
+aa33a0de	Baixa sozinho no primeiro uso
+e788bf35	Baixar agora
+d6d15ddf	Roda no seu computador: nada é enviado pela internet, sem conta nem chave.
+ab0b938b	Todos os modelos e downloads…
+682437f6	Primeiro inicie o servidor local do app e depois clique em Lista para escolher um modelo carregado.
+2fe90724	Clique em Lista para ver os modelos que sua conta pode usar.
+d276bf6c	claude-opus-5-5 é o mais capaz; claude-sonnet-5-5 e claude-haiku-5-5 custam menos.
+f7b16852	Seu próprio servidor LibreTranslate (sem chave) ou um hospedado com chave.
+03a9735a	Obter o app ↗
+8aa63bd0	Obter uma chave de API ↗
+63772c47	Testando… (iniciando o cérebro de IA)
+8d2937a1	Lista
+ef7e1cf8	Perguntar ao serviço quais modelos ele tem
+0b957a7e	perguntando ao serviço…
+77aa80e6	Escolha um modelo
+a42cc3de	API online / de servidor
+113e7299	O som do vídeo é enviado para este serviço para ser transcrito. OpenAI e Groq precisam de uma chave de API.
+79f47a0a	Obter o servidor ↗
+8be167fe	VOICEVOX (grátis, offline)
+2d20e7a9	Vozes da OpenAI / Kokoro (API)
+74dc9b9b	Voz japonesa do próprio computador
+38181613	Iniciar o VOICEVOX sozinho quando necessário
+a8149a8d	Grátis, offline e de alta qualidade. O BabelCraft baixa o mecanismo VOICEVOX (1.9 GB) na primeira vez. Dê crédito à voz ao publicar (ex.: "VOICEVOX:ずんだもん").
+566ec4bc	Site e termos do VOICEVOX ↗
+6dc9db9c	ex.: Kokoro-FastAPI local (voz jf_alpha) ou OpenAI (gpt-4o-mini-tts / tts-1, vozes alloy, nova…).
+34db4ba0	Nome da voz
+238d14f9	Usa uma voz japonesa integrada ao Windows ou ao macOS. Deixe o nome vazio para usar a primeira encontrada.
+e9431edf	Encontradas:
+2d7709f3	Zundamon · normal
+5d8c1d94	Zundamon · doce
+99ad8c08	Shikoku Metan · normal
+831f9805	Shikoku Metan · doce
+b431b666	Kasukabe Tsumugi
+ed1e4728	Namine Ritsu
+7a204a92	Amehare Hau
+70641198	Kurono Takehiro
+01006773	Shirakami Kotarou
+40603730	Aoyama Ryusei
+53f6ec6d	Meimei Himari
+308e1da9	Kyushu Sora
+a05669b6	Usar o cérebro de IA offline
+b917e82d	Cole a chave de API do serviço em Configurações → Fala (ou na página Modelos de IA e downloads) ou volte para o whisper-cli (grátis, offline).
+a042c25b	O BabelCraft baixa sozinho o mecanismo gratuito VOICEVOX (clique em "Configurar automaticamente" ou apenas inicie um trabalho). Ao publicar um vídeo, dê crédito à voz, ex.: "VOICEVOX:ずんだもん".
+8584f7c1	Windows: Configurações → Hora e idioma → Fala → Adicionar vozes → Japonês. Mac: Ajustes do Sistema → Acessibilidade → Conteúdo Falado → Voz do Sistema → Gerenciar Vozes → Japonês. Ou escolha o VOICEVOX (grátis, baixado automaticamente).
+5f77ac51	Escolha o VOICEVOX em Configurações → Voz em japonês (grátis, baixado automaticamente) ou inicie o app ou servidor de voz escolhido.
+ba141bed	Instale o Ollama ou o LM Studio (veja Modelos de IA e downloads) ou use um serviço online em Configurações → Tradução.
+04045eb9	Cole sua chave de API da Anthropic em Configurações → Tradução ou use o cérebro de IA offline gratuito.
+cd6aeedd	Inicie seu servidor LibreTranslate ou use o cérebro de IA offline gratuito.
+1399ecab	Instale o Ollama (ollama.com) e execute `ollama pull qwen2.5:7b` — ou clique no botão para usar o cérebro de IA offline do próprio BabelCraft (sem instalar nada).
+29e7a63c	Abra o app e inicie o servidor local dele (LM Studio: Developer → Start server; Jan: Settings → Local API Server) — ou use o cérebro de IA offline integrado.
+8c7fc587	Cole sua chave de API em Configurações → Tradução (ou na página Modelos de IA e downloads) ou use o cérebro de IA offline gratuito.
+cc44fa0d	▶  Traduzir um vídeo
+8a97d217	⬇  Modelos de IA e downloads
+04058df0	Modelos de IA e downloads
+0815aad4	Atualizar
+46ec8da6	Tudo o que o BabelCraft usa, de onde vem e o que já está neste computador. Os downloads vão para a pasta do BabelCraft — nada é instalado no seu sistema.
+8d304745	Pasta:
+ecbbac42	Necessário para todo vídeo (baixado automaticamente)
+660ec0f4	pronto
+eb5c7115	ainda não baixado
+7804ddd3	Site ↗
+a31e273b	Lê o vídeo e grava a versão final em japonês.
+314d7fdc	Modelos de leitura de texto (OCR)
+6f056690	Encontra e lê o texto em inglês que aparece na imagem.
+e7bb35f1	Fonte japonesa (Noto Sans JP)
+79f59e25	Desenha o texto em japonês sobre o vídeo para que nunca apareça como □□□.
+a1cfe1c4	use a API online ou o download com Whisper integrado
+5044f7bd	Ferramenta de fala Whisper (whisper.cpp)
+69c313d8	Transforma a fala em inglês em texto com tempos.
+54dbde20	Modelo de fala do Whisper
+970b4034	Modelos maiores ouvem com mais precisão, mas demoram mais.
+6d3ffa7c	Cérebro de IA offline — tradução no seu próprio computador
+28bc3f50	Sem conta, sem chave de API e nada sai do seu computador. O BabelCraft baixa o mecanismo llama.cpp e o modelo que você escolher, roda-o oculto só durante a tradução e depois o fecha.
+f9328dff	não disponível para este computador
+7794b21a	Mecanismo do cérebro de IA (llama.cpp)
+6de93ce5	O programa que roda o modelo de IA.
+016066fd	em uso
+2d6293d0	baixado
+a48e99aa	Licença:
+0ef2e7dc	Página do modelo ↗
+21a5901d	Remover
+dbb8a7a8	Usar para traduzir
+e4089c1b	Ou use o app gratuito Ollama
+6d4b71f5	Ainda não há modelos — baixe um abaixo.
+147eb74c	em execução
+1471d28b	modelos
+529618e6	Usar o Ollama para traduzir
+632b93f7	Baixar um modelo no Ollama:
+e6bfba38	Biblioteca de modelos ↗
+fe001abd	parado
+89b641a3	App gratuito que roda muitos modelos de IA abertos. Instale-o e o BabelCraft poderá usá-lo e baixar modelos nele.
+1b155e86	Obter o Ollama ↗
+af47f3df	em execução ·
+186fb844	baixado · inicia sozinho
+e5920759	app VOICEVOX encontrado · inicia sozinho
+65a00c42	Mecanismo de voz VOICEVOX
+0d966565	Vozes japonesas naturais, grátis e offline. Dê crédito à voz ao publicar, ex.: "VOICEVOX:ずんだもん".
+0cad0cf1	Termos ↗
+266842d1	nenhuma voz japonesa instalada
+fd23b2f4	não disponível no Linux
+ee7e05b6	O Windows e o macOS podem adicionar uma voz japonesa de graça nas configurações de fala.
+b65323cd	Configurações de fala ↗
+d2f20db6	Outros apps gratuitos com que o BabelCraft pode trabalhar
+c0c6cd33	Serviços de IA online — cole sua chave de API
+99c6fd5e	As chaves ficam no arquivo de configurações do BabelCraft neste computador. Serviços online cobram pelo uso; escolha um em Configurações → Tradução ou Fala.
+74c866bf	chave salva
+327e1475	chave do ambiente
+1265c286	Obter uma chave ↗
+b2c9aee7	cole a chave de API
+e6a52873	Só é preciso uma vez. Se você cancelar, o que já foi baixado é mantido e continua da próxima vez.
+16705937	O que foi baixado até agora é mantido: da próxima vez, continua de onde parou.
+ad7e2c40	Aguarde…
+9d34077c	Sobre o BabelCraft
+62f7c629	Software livre: você pode compartilhá-lo e modificá-lo sob a Licença Pública Geral GNU, versão 3 ou (a seu critério) qualquer versão posterior. Ele é oferecido SEM NENHUMA GARANTIA.
+c571731a	Licença (GNU GPL v3) ↗
+ae71d394	Código-fonte ↗
+62d26c08	Tempo restante (download)
+fe6c570e	Descompactando o FFmpeg
+7c3e591d	Modelo de detecção de texto
+90f96e59	Modelo de reconhecimento de texto
+f1805489	Ferramenta Whisper (whisper.cpp)
+02807710	Descompactando o whisper.cpp
+0f155e49	Procurando o mecanismo do cérebro de IA (llama.cpp)
+f77b5742	Descompactando o mecanismo do cérebro de IA
+cfddb4cd	Procurando o mecanismo VOICEVOX mais recente
+544c71a5	Juntando as partes do VOICEVOX
+7efd1c39	Descompactando o VOICEVOX (cerca de um minuto)
+feb4db1b	Configuração inicial · download {0} de {1}…
+3131ba31	{0} de {1}
+57b7e123	{0}/s
+26cdd5ba	continuando da última vez
+53d004e2	faltam {0}
+1cdbb8d4	Modelo do cérebro de IA {0}
+961c54b6	Modelo do Whisper {0}
+96a241fc	Mecanismo de voz VOICEVOX (parte {0} de {1})
+3b59fa88	Idioma dos botões e menus do BabelCraft
+3eb0dc0a	Pesquisar idiomas…
+335bbe86	Prontos para usar
+3f21323f	Mais idiomas — a IA do BabelCraft traduz os botões e menus na primeira vez que você escolhe um
+29060690	Traduzindo o BabelCraft: {0}…
+fcb70d79	Usa o tradutor escolhido em Configurações → Tradução. O cérebro de IA offline baixa cerca de 2.5 GB na primeira vez.
+280bb407	Escrita da direita para a esquerda pode aparecer fora de ordem em alguns lugares.
+99e87037	Aguarde o vídeo terminar de ser traduzido.
+e7e8b162	Não foi possível traduzir os botões e menus
+e3602340	Baixando uma fonte para {0}…
+2d107cdd	Nenhum idioma corresponde.
+917d4a36	Traduzido por IA
+be692ced	Traduzir de novo
+e1fdb80e	Aguarde o download atual terminar.

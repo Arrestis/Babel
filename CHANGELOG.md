@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.0
+
+### New
+- **BabelCraft's buttons and menus in any language.** The two language buttons are replaced by one **speaking-mouth button** (a mouth with sound waves) at the top right. It opens a list of 115 languages, each shown in its own writing, with a search box. English stays the default.
+- **Translated by hand and built in:** English, 日本語, Español, Français, Deutsch, Português, Italiano, Русский, 简体中文 and 한국어 switch at once.
+- **Every other language** is translated by BabelCraft's AI the first time you choose it, using the translator chosen in *Settings → Translation* (the offline AI brain unless you picked another). The menu shows the progress, the result is saved, and from then on the switch is instant. Right-click → **Translate again** redoes it.
+- **Fonts for every writing system:** Chinese, Korean, Hindi and other Indian scripts, Arabic, Hebrew, Thai, Amharic, Georgian, Armenian… use the computer's own font, or a free Noto font is downloaded when there is none.
+- `--lang <code>` accepts any language code or name (for example `--lang fr`, `--lang zh-Hans`).
+
+### Improved
+- *Reset to defaults* keeps the interface language.
+- The video file boxes make room for longer labels in other languages.
+- Interface texts now live in plain text files (`assets/i18n/`), so anyone can correct or add a translation.
+
 ## 1.1.2
 
 ### New

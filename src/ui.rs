@@ -5,8 +5,9 @@
 use crate::ai::{self, PROVIDERS};
 use crate::brain;
 use crate::checks::{self, Check, Fix, Status};
-use crate::config::{self, AsrEngine, AudioMode, Config, OcrEngineKind, OcrSampling, TranslationBackend, TtsBackend, UiLanguage};
-use crate::i18n::tr;
+use crate::config::{self, AsrEngine, AudioMode, Config, OcrEngineKind, OcrSampling, TranslationBackend, TtsBackend};
+use crate::i18n::{tr, trf};
+use crate::langs::{self, Lang};
 use crate::pipeline::{self, Job};
 use crate::tools::Component;
 use crate::util::{CancelToken, DownloadStats, LogLevel, Msg, Reporter, SetupInfo, Stage, fmt_duration};
@@ -85,6 +86,8 @@ enum Task {
     WhisperModel(usize),
     BrainModel(&'static str),
     OllamaPull(String),
+    /// Get the interface ready in this language (font + translation); `true` = translate it anew.
+    Interface(String, bool),
 }
 
 struct Download {
@@ -165,6 +168,10 @@ fn run_task(task: &Task, cfg: &Config, cancel: &CancelToken, progress: crate::to
             ai::ollama_pull(&cfg.translation.ollama_url, name, cancel, progress)?;
             Ok(format!("{name} (in Ollama)"))
         }
+        Task::Interface(code, again) => {
+            let lang = langs::find(code).ok_or_else(|| anyhow::anyhow!("unknown language {code}"))?;
+            crate::interface::prepare(cfg, lang, *again, cancel, progress)
+        }
     }
 }
 
@@ -175,6 +182,7 @@ fn task_label(task: &Task) -> String {
         Task::WhisperModel(i) => format!("Whisper model {}", WHISPER_MODELS[*i].0),
         Task::BrainModel(id) => format!("AI brain model {}", brain::model(id).name),
         Task::OllamaPull(n) => format!("{n} into Ollama"),
+        Task::Interface(code, _) => format!("interface language {}", langs::find(code).map(|l| l.english).unwrap_or(code)),
     }
 }
 
@@ -190,6 +198,17 @@ pub struct BabelApp {
     dirty_since: Option<Instant>,
     icon: TextureHandle,
     has_cjk_ui_font: bool,
+    /// Interface language the fonts were set up for, and whether its letters can be shown.
+    ui_fonts_for: String,
+    ui_script_ok: bool,
+    /// The language menu (speaking-mouth button in the header).
+    lang_menu_open: bool,
+    lang_search: String,
+    lang_notice: String,
+    /// Fonts for every writing system are loaded (so the menu can show each language's own name).
+    menu_fonts: bool,
+    /// Languages translated earlier by BabelCraft's AI (looked up now and then while the menu is open).
+    lang_saved: Option<(Instant, HashSet<String>)>,
     started: Instant,
     frame: u64,
     splash_skipped: bool,
@@ -249,7 +268,8 @@ impl BabelApp {
     pub fn new(cc: &eframe::CreationContext<'_>, screenshot: Option<PathBuf>) -> Self {
         let ctx = &cc.egui_ctx;
         let cfg = Config::load();
-        let has_cjk_ui_font = install_fonts(ctx, &cfg);
+        let fonts = install_fonts(ctx, &cfg, false);
+        let has_cjk_ui_font = fonts.japanese;
         apply_theme(ctx);
 
         let icon_img = image::load_from_memory(crate::ICON_PNG).map(|i| i.to_rgba8()).unwrap_or_default();
@@ -262,12 +282,20 @@ impl BabelApp {
             .position(|(f, _)| cfg.whisper_model().file_name().map(|n| n == *f).unwrap_or(false))
             .unwrap_or(1);
 
+        let ui_fonts_for = cfg.ui_lang().to_string();
         let mut app = Self {
             saved_cfg: cfg.clone(),
             cfg,
             dirty_since: None,
             icon,
             has_cjk_ui_font,
+            ui_fonts_for,
+            ui_script_ok: fonts.script_ok,
+            lang_menu_open: false,
+            lang_search: String::new(),
+            lang_notice: String::new(),
+            menu_fonts: false,
+            lang_saved: None,
             started: Instant::now(),
             frame: 0,
             splash_skipped: false,
@@ -313,6 +341,14 @@ impl BabelApp {
         app.start_checks(ctx);
         if app.screenshot.is_some() && std::env::var("BABELCRAFT_SHOT_SETUP").is_ok_and(|v| v == "1") {
             app.show_sample_setup();
+        }
+        // Screenshot mode only: BABELCRAFT_SHOT_LANGMENU=1 photographs the open language menu
+        // (any other value is typed into its search box).
+        if let (Some(_), Ok(v)) = (&app.screenshot, std::env::var("BABELCRAFT_SHOT_LANGMENU")) {
+            app.lang_menu_open = true;
+            if v != "1" {
+                app.lang_search = v;
+            }
         }
         app
     }
@@ -552,7 +588,14 @@ impl BabelApp {
                 Ok(done) => {
                     self.log(LogLevel::Ok, format!("Done: {what} — {done}"));
                     match &task {
-                        Task::AutoInstall | Task::Component(Component::Font) => self.has_cjk_ui_font = install_fonts(ctx, &self.cfg),
+                        // Fonts may have arrived: set them up again.
+                        Task::AutoInstall | Task::Component(Component::Font) => self.ui_fonts_for.clear(),
+                        Task::Interface(code, _) => {
+                            self.cfg.ui_language = code.clone();
+                            self.ui_fonts_for.clear();
+                            self.lang_menu_open = false;
+                            self.lang_notice.clear();
+                        }
                         Task::WhisperModel(i) => {
                             let file = WHISPER_MODELS[*i].0;
                             self.cfg.asr.model_path = if file == config::DEFAULT_WHISPER_MODEL {
@@ -566,7 +609,12 @@ impl BabelApp {
                         _ => {}
                     }
                 }
-                Err(e) => self.log(LogLevel::Error, format!("{what}: {e}")),
+                Err(e) => {
+                    if matches!(task, Task::Interface(..)) {
+                        self.lang_notice = format!("{}: {}", tr("Could not translate the buttons and menus"), e.lines().next().unwrap_or(""));
+                    }
+                    self.log(LogLevel::Error, format!("{what}: {e}"));
+                }
             }
             self.start_checks(ctx);
             self.inventory_rx = None;
@@ -728,25 +776,164 @@ impl BabelApp {
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         toggle_chip(ui, &mut self.show_log, tr("Log console"));
                         toggle_chip(ui, &mut self.show_settings, tr("Settings"));
-                        // Interface language switch (shows each language in its own script).
+                        // Interface language: one button with the speaking-mouth picture, opening
+                        // a list of every language (each shown in its own writing).
                         ui.add_space(6.0);
-                        let lang = &mut self.cfg.ui_language;
-                        for (value, label) in [(UiLanguage::Japanese, "日本語"), (UiLanguage::English, "English")] {
-                            let on = *lang == value;
-                            let b = egui::Button::new(RichText::new(label).color(if on { INK } else { CREAM }))
-                                .fill(if on { YELLOW } else { CARD })
-                                .corner_radius(14)
-                                .min_size(vec2(0.0, 28.0));
-                            if ui.add(b).on_hover_text("Interface language / 表示言語").clicked() {
-                                *lang = value;
-                            }
+                        let lang = langs::find(self.cfg.ui_lang()).unwrap_or_else(langs::english);
+                        let busy = self.download.as_ref().is_some_and(|d| matches!(d.task, Task::Interface(..)));
+                        let resp = language_button(ui, lang, busy, self.lang_menu_open)
+                            .on_hover_text(format!("{} · Language", tr("Language of BabelCraft's buttons and menus")));
+                        if resp.clicked() {
+                            self.lang_menu_open = !self.lang_menu_open;
                         }
+                        let mut open = self.lang_menu_open;
+                        let close_behavior = if self.screenshot.is_some() {
+                            egui::PopupCloseBehavior::IgnoreClicks
+                        } else {
+                            egui::PopupCloseBehavior::CloseOnClickOutside
+                        };
+                        egui::Popup::from_response(&resp)
+                            .open_bool(&mut open)
+                            .close_behavior(close_behavior)
+                            .align(egui::RectAlign::BOTTOM_END)
+                            .gap(6.0)
+                            .width(380.0)
+                            .frame(egui::Frame::new().fill(CARD).stroke(Stroke::new(1.0, YELLOW_DIM)).corner_radius(10).inner_margin(12))
+                            .show(|ui| self.language_menu(ui));
+                        // Closed by a click outside, or by choosing a language.
+                        self.lang_menu_open = open && self.lang_menu_open;
                         ui.add_space(8.0);
                         let (txt, col) = if self.running() { (tr("● Working in the background"), YELLOW) } else { (tr("● Idle"), MUTED) };
                         ui.label(RichText::new(txt).size(13.0).color(col));
                     });
                 });
             });
+    }
+
+    /// The list behind the speaking-mouth button: languages ready to use, then every other
+    /// language (BabelCraft's AI translates the interface the first time one is chosen).
+    fn language_menu(&mut self, ui: &mut egui::Ui) {
+        let current = self.cfg.ui_lang().to_string();
+        ui.horizontal(|ui| {
+            let (r, _) = ui.allocate_exact_size(vec2(44.0, 44.0), Sense::hover());
+            paint_language_icon(ui.painter(), r);
+            ui.add_space(4.0);
+            ui.vertical(|ui| {
+                ui.add_space(3.0);
+                ui.label(RichText::new(tr("Interface language")).size(16.0).strong().color(CREAM));
+                ui.label(RichText::new(tr("Language of BabelCraft's buttons and menus")).size(12.0).color(MUTED));
+            });
+        });
+        ui.add_space(6.0);
+        ui.add(egui::TextEdit::singleline(&mut self.lang_search).hint_text(tr("Search languages…")).desired_width(f32::INFINITY));
+
+        // A language being set up (font download and/or translation).
+        if let Some(dl) = &self.download {
+            if let Task::Interface(code, _) = &dl.task {
+                let name = langs::find(code).map(|l| l.native).unwrap_or(code);
+                ui.add_space(6.0);
+                ui.horizontal_wrapped(|ui| {
+                    ui.spinner();
+                    ui.label(RichText::new(trf("Translating BabelCraft into {0}…", &[name])).color(CREAM));
+                    if ui.small_button(tr("Stop")).clicked() {
+                        dl.cancel.cancel();
+                    }
+                });
+                hint(ui, &crate::i18n::tr_step(&dl.what));
+                big_bar(ui, dl.stats.and_then(|d| d.frac()).unwrap_or(dl.frac), 8.0, YELLOW, "");
+            }
+        }
+        if !self.lang_notice.is_empty() {
+            ui.add_space(6.0);
+            banner(ui, ORANGE, |ui| {
+                ui.label(RichText::new(&self.lang_notice).size(12.5).color(CREAM));
+            });
+        }
+
+        // Saved AI translations, looked up every couple of seconds.
+        if self.lang_saved.as_ref().is_none_or(|(t, _)| t.elapsed() > Duration::from_secs(2)) {
+            let dir = config::data_dir().join("i18n");
+            let saved = std::fs::read_dir(dir)
+                .map(|rd| rd.flatten().filter_map(|e| e.path().file_stem().map(|s| s.to_string_lossy().to_string())).collect())
+                .unwrap_or_default();
+            self.lang_saved = Some((Instant::now(), saved));
+        }
+        let saved = self.lang_saved.as_ref().map(|(_, s)| s.clone()).unwrap_or_default();
+        let built_in: HashSet<&str> = crate::i18n::built_in_codes().chain(["en"]).collect();
+        let q = self.lang_search.trim().to_lowercase();
+        let wanted = |l: &Lang| q.is_empty() || l.english.to_lowercase().contains(&q) || l.native.to_lowercase().contains(&q) || l.code.to_lowercase() == q;
+        let (ready, more): (Vec<&'static Lang>, Vec<&'static Lang>) =
+            langs::LANGUAGES.iter().filter(|l| wanted(l)).partition(|l| built_in.contains(l.code) || saved.contains(l.code));
+
+        let mut chosen: Option<(&'static str, bool)> = None;
+        ui.add_space(6.0);
+        // As tall as the window allows.
+        let list_height = (ui.ctx().content_rect().height() - 250.0).clamp(160.0, 560.0);
+        egui::ScrollArea::vertical()
+            .max_height(list_height)
+            .min_scrolled_height(list_height)
+            .auto_shrink([false, true])
+            .show(ui, |ui| {
+            if !ready.is_empty() {
+                ui.label(RichText::new(tr("Ready to use")).size(12.5).strong().color(YELLOW));
+                for l in &ready {
+                    let ai = saved.contains(l.code) && !built_in.contains(l.code);
+                    let tag = if ai { tr("Translated by AI") } else { "" };
+                    let row = language_row(ui, l, l.code == current, tag);
+                    if row.clicked() {
+                        chosen = Some((l.code, false));
+                    }
+                    if ai {
+                        row.context_menu(|ui| {
+                            if ui.button(tr("Translate again")).clicked() {
+                                chosen = Some((l.code, true));
+                            }
+                        });
+                    }
+                }
+            }
+            if !more.is_empty() {
+                ui.add_space(8.0);
+                ui.label(RichText::new(tr("More languages — BabelCraft's AI translates the buttons and menus the first time you choose one")).size(12.5).strong().color(YELLOW));
+                hint(ui, tr("Uses the translator chosen in Settings → Translation. The offline AI brain downloads about 2.5 GB the first time."));
+                for l in &more {
+                    if language_row(ui, l, false, "").clicked() {
+                        chosen = Some((l.code, false));
+                    }
+                }
+            }
+            if ready.is_empty() && more.is_empty() {
+                hint(ui, tr("No language matches."));
+            }
+        });
+        if let Some((code, again)) = chosen {
+            self.choose_language(code, again, ui.ctx());
+        }
+    }
+
+    /// Switches the interface to `code`, getting it ready first if it needs a font or a translation.
+    fn choose_language(&mut self, code: &'static str, again: bool, ctx: &egui::Context) {
+        self.lang_notice.clear();
+        let Some(lang) = langs::find(code) else { return };
+        let (font, text) = crate::interface::needs(lang);
+        if !font && !text && !again {
+            self.cfg.ui_language = lang.code.to_string();
+            self.lang_menu_open = false;
+            self.lang_search.clear();
+            return;
+        }
+        if self.running() {
+            self.lang_notice = tr("Wait until the video has finished translating.").into();
+            return;
+        }
+        if self.download.is_some() {
+            self.lang_notice = tr("Wait until the current download has finished.").into();
+            return;
+        }
+        if lang.script.rtl() {
+            self.log(LogLevel::Info, tr("Right-to-left writing may show in the wrong order in places.").into());
+        }
+        self.start_task(Task::Interface(lang.code.to_string(), again), ctx);
     }
 
     fn log_panel(&mut self, ui: &mut egui::Ui) {
@@ -808,8 +995,9 @@ impl BabelApp {
                     ui.label(RichText::new(tr("Settings")).size(18.0).strong().color(CREAM));
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         if ui.small_button(tr("Reset to defaults")).clicked() {
-                            let (i, o) = (self.cfg.last_input.clone(), self.cfg.last_output.clone());
-                            self.cfg = Config { last_input: i, last_output: o, ..Default::default() };
+                            // Keeps the chosen files and the interface language.
+                            let (i, o, l) = (self.cfg.last_input.clone(), self.cfg.last_output.clone(), self.cfg.ui_language.clone());
+                            self.cfg = Config { last_input: i, last_output: o, ui_language: l, ..Default::default() };
                         }
                     });
                 });
@@ -1303,16 +1491,28 @@ impl BabelApp {
             ui.label(RichText::new(tr("1  ·  Choose your video")).size(17.0).strong().color(CREAM));
             ui.add_space(6.0);
             ui.add_enabled_ui(!running, |ui| {
-                let w = (ui.available_width() - 290.0).max(200.0);
+                // The label column fits the longer label in the chosen language; the text boxes
+                // take what is left beside the Browse buttons.
+                let body = egui::TextStyle::Body.resolve(ui.style());
+                let label_w = [tr("English video"), tr("Save Japanese video as")]
+                    .iter()
+                    .map(|t| ui.painter().layout_no_wrap(t.to_string(), body.clone(), MUTED).size().x)
+                    .fold(0.0f32, f32::max);
+                let label_w = (label_w + 16.0).clamp(150.0, 280.0);
+                let browse_w = [tr("Browse…")]
+                    .iter()
+                    .map(|t| ui.painter().layout_no_wrap(t.to_string(), body.clone(), CREAM).size().x + 24.0)
+                    .fold(90.0f32, f32::max);
+                let w = (ui.available_width() - label_w - browse_w - 2.0 * ui.spacing().item_spacing.x - 4.0).max(160.0);
                 ui.horizontal(|ui| {
-                    ui.add_sized(vec2(170.0, 28.0), egui::Label::new(RichText::new(tr("English video")).color(MUTED)));
+                    ui.add_sized(vec2(label_w, 28.0), egui::Label::new(RichText::new(tr("English video")).color(MUTED)));
                     ui.add_sized(
                         vec2(w, 28.0),
                         egui::TextEdit::singleline(&mut self.cfg.last_input)
                             .hint_text(tr("MP4, MKV, MOV or AVI — or drop a file on the window"))
                             .align(Align2::LEFT_CENTER),
                     );
-                    if ui.add_sized(vec2(90.0, 28.0), egui::Button::new(tr("Browse…"))).clicked() {
+                    if ui.add_sized(vec2(browse_w, 28.0), egui::Button::new(tr("Browse…"))).clicked() {
                         picked_input = rfd::FileDialog::new()
                             .set_title(tr("Choose an English video"))
                             .add_filter("Video", &pipeline::INPUT_EXTENSIONS)
@@ -1321,14 +1521,14 @@ impl BabelApp {
                 });
                 ui.add_space(4.0);
                 ui.horizontal(|ui| {
-                    ui.add_sized(vec2(170.0, 28.0), egui::Label::new(RichText::new(tr("Save Japanese video as")).color(MUTED)));
+                    ui.add_sized(vec2(label_w, 28.0), egui::Label::new(RichText::new(tr("Save Japanese video as")).color(MUTED)));
                     ui.add_sized(
                         vec2(w, 28.0),
                         egui::TextEdit::singleline(&mut self.cfg.last_output)
                             .hint_text(tr("where the translated video is written (.mp4 / .mkv / .mov)"))
                             .align(Align2::LEFT_CENTER),
                     );
-                    if ui.add_sized(vec2(90.0, 28.0), egui::Button::new(tr("Browse…"))).clicked() {
+                    if ui.add_sized(vec2(browse_w, 28.0), egui::Button::new(tr("Browse…"))).clicked() {
                         let mut d = rfd::FileDialog::new()
                             .set_title(tr("Save the Japanese video"))
                             .add_filter("MP4 video", &["mp4"])
@@ -2122,8 +2322,23 @@ impl eframe::App for BabelApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
         self.frame += 1;
-        // Japanese interface needs a Japanese-capable font; without one, stay in English.
-        crate::i18n::set_japanese(self.cfg.ui_language == UiLanguage::Japanese && self.has_cjk_ui_font);
+        // Interface language: fonts are set up again when it changes; without a font for its
+        // letters, or before its translation exists, the interface stays in English.
+        let code = self.cfg.ui_lang().to_string();
+        // The language menu shows every language's own name, so it needs every writing system.
+        if self.lang_menu_open && !self.menu_fonts {
+            self.menu_fonts = true;
+            self.ui_fonts_for.clear();
+        }
+        if self.ui_fonts_for != code {
+            let fonts = install_fonts(&ctx, &self.cfg, self.menu_fonts);
+            self.has_cjk_ui_font = fonts.japanese;
+            self.ui_script_ok = fonts.script_ok;
+            self.ui_fonts_for = code.clone();
+        }
+        if !(self.ui_script_ok && crate::i18n::set_language(&code)) {
+            crate::i18n::set_language("en");
+        }
         self.handle_screenshot(&ctx);
 
         // Drag & drop a video anywhere on the window.
@@ -2505,6 +2720,90 @@ const VOICEVOX_SPEAKERS: &[(u32, &str)] = &[
     (16, "Kyushu Sora"),
 ];
 
+/// The picture that stands for "language": a mouth with sound waves coming from it, on a tile
+/// in the app icon's yellow.
+fn paint_language_icon(p: &egui::Painter, rect: egui::Rect) {
+    let s = rect.width().min(rect.height());
+    let o = rect.center() - vec2(s, s) * 0.5;
+    let at = |x: f32, y: f32| egui::pos2(o.x + x * s, o.y + y * s);
+    p.rect_filled(egui::Rect::from_min_size(o, vec2(s, s)), (s * 0.24).round() as u8, YELLOW);
+    // Lips: a full lower lip and an upper lip with two curves (the "cupid's bow").
+    let lip = Color32::from_rgb(196, 62, 44);
+    let lip_shade = Color32::from_rgb(140, 36, 26);
+    let lip_light = Color32::from_rgb(232, 120, 96);
+    p.add(egui::Shape::ellipse_filled(at(0.34, 0.57), vec2(0.255, 0.16) * s, lip_shade));
+    p.add(egui::Shape::ellipse_filled(at(0.34, 0.555), vec2(0.245, 0.15) * s, lip));
+    p.add(egui::Shape::ellipse_filled(at(0.255, 0.45), vec2(0.15, 0.105) * s, lip));
+    p.add(egui::Shape::ellipse_filled(at(0.425, 0.45), vec2(0.15, 0.105) * s, lip));
+    p.add(egui::Shape::ellipse_filled(at(0.34, 0.635), vec2(0.1, 0.028) * s, lip_light));
+    // Open mouth with a glimpse of teeth.
+    p.add(egui::Shape::ellipse_filled(at(0.34, 0.525), vec2(0.165, 0.068) * s, INK));
+    p.add(egui::Shape::ellipse_filled(at(0.34, 0.49), vec2(0.115, 0.026) * s, CREAM));
+    // Sound waves coming out of the mouth.
+    let c = at(0.575, 0.525);
+    for (i, r) in [0.13f32, 0.225, 0.32].into_iter().enumerate() {
+        let pts: Vec<egui::Pos2> = (0..=18)
+            .map(|k| {
+                let a = (-52.0 + 104.0 * k as f32 / 18.0).to_radians();
+                c + vec2(a.cos(), a.sin()) * r * s
+            })
+            .collect();
+        p.add(egui::Shape::line(pts, Stroke::new((s * (0.07 - i as f32 * 0.01)).max(1.3), INK)));
+    }
+}
+
+/// The interface-language button in the header: the speaking-mouth picture and the language's
+/// own name.
+fn language_button(ui: &mut egui::Ui, lang: &Lang, busy: bool, open: bool) -> egui::Response {
+    // A name the fonts can't show yet (before its font is set up) is shown in English.
+    let font = FontId::proportional(14.0);
+    let shown = if ui.ctx().fonts_mut(|f| f.has_glyphs(&font, lang.native)) { lang.native } else { lang.english };
+    let label = if busy { format!("{shown} …") } else { shown.to_string() };
+    let galley = ui.painter().layout_no_wrap(label, font, CREAM);
+    let icon = 24.0;
+    let size = vec2(5.0 + icon + 8.0 + galley.size().x + 12.0, 32.0);
+    let (rect, resp) = ui.allocate_exact_size(size, Sense::click());
+    let p = ui.painter();
+    let hot = open || resp.hovered();
+    let fill = if open { Color32::from_rgb(66, 54, 18) } else if resp.hovered() { Color32::from_rgb(52, 46, 30) } else { CARD };
+    p.rect_filled(rect, 16, fill);
+    p.rect_stroke(rect, 16, Stroke::new(1.0, if hot { YELLOW } else { CARD_STROKE }), egui::StrokeKind::Inside);
+    let icon_rect = egui::Rect::from_min_size(egui::pos2(rect.left() + 5.0, rect.center().y - icon / 2.0), vec2(icon, icon));
+    paint_language_icon(p, icon_rect);
+    p.galley(egui::pos2(icon_rect.right() + 8.0, rect.center().y - galley.size().y / 2.0), galley, CREAM);
+    resp
+}
+
+/// One language in the language menu: its own name, its English name and a note on the right.
+fn language_row(ui: &mut egui::Ui, l: &Lang, current: bool, tag: &str) -> egui::Response {
+    let w = ui.available_width();
+    let (rect, resp) = ui.allocate_exact_size(vec2(w, 28.0), Sense::click());
+    let p = ui.painter();
+    if current {
+        p.rect_filled(rect, 6, Color32::from_rgb(66, 54, 18));
+    } else if resp.hovered() {
+        p.rect_filled(rect, 6, Color32::from_rgb(52, 46, 30));
+    }
+    let name_font = FontId::proportional(14.0);
+    // Its own name when the fonts can show it, otherwise just the English name.
+    let own = ui.ctx().fonts_mut(|f| f.has_glyphs(&name_font, l.native));
+    let mut x = rect.left() + 8.0;
+    let y = rect.center().y;
+    if current {
+        p.text(egui::pos2(x, y), Align2::LEFT_CENTER, "✓", FontId::proportional(13.0), YELLOW);
+    }
+    x += 18.0;
+    let main = if own { l.native } else { l.english };
+    let r = p.text(egui::pos2(x, y), Align2::LEFT_CENTER, main, name_font, if current { YELLOW } else { CREAM });
+    if own && l.native != l.english {
+        p.text(egui::pos2(r.right() + 8.0, y + 1.0), Align2::LEFT_CENTER, l.english, FontId::proportional(12.0), MUTED);
+    }
+    if !tag.is_empty() {
+        p.text(egui::pos2(rect.right() - 8.0, y + 1.0), Align2::RIGHT_CENTER, tag, FontId::proportional(11.5), MUTED);
+    }
+    if l.script.rtl() { resp.on_hover_text(tr("Right-to-left writing may show in the wrong order in places.")) } else { resp }
+}
+
 fn toggle_chip(ui: &mut egui::Ui, on: &mut bool, label: &str) {
     let b = egui::Button::new(RichText::new(label).color(if *on { INK } else { CREAM }))
         .fill(if *on { YELLOW } else { CARD })
@@ -2535,8 +2834,19 @@ fn reveal(path: &std::path::Path) {
     let _ = std::process::Command::new("xdg-open").arg(path.parent().unwrap_or(path)).spawn();
 }
 
-/// Adds a Japanese-capable font as a fallback so Japanese shows in the UI and log.
-fn install_fonts(ctx: &egui::Context, cfg: &Config) -> bool {
+/// What `install_fonts` found.
+struct UiFonts {
+    /// A Japanese-capable font (for 日本語 anywhere in the window).
+    japanese: bool,
+    /// The interface language's letters can be shown.
+    script_ok: bool,
+}
+
+/// Sets up the window's fonts: egui's own (Latin, Greek, Cyrillic), the symbols font, a font
+/// for the interface language's writing system (Chinese, Korean, Hindi, Arabic, Thai…) and a
+/// Japanese-capable font. `all_scripts` adds the computer's fonts for every other writing
+/// system too (for the language menu, which shows each language's own name).
+fn install_fonts(ctx: &egui::Context, cfg: &Config, all_scripts: bool) -> UiFonts {
     let mut defs = FontDefinitions::default();
     // The bundled monospace font has the arrows, dots and squares (▶ ⬇ ● ↗ ■ →) the
     // proportional one lacks; fall back to it so they never show as boxes.
@@ -2546,23 +2856,47 @@ fn install_fonts(ctx: &egui::Context, cfg: &Config) -> bool {
             prop.push("Hack".into());
         }
     }
-    let mut found = false;
-    if let Some(f) = crate::fonts::find_ui_font(&cfg.overlay.font_path) {
-        if let Some(data) = crate::fonts::load(&f) {
-            let mut fd = FontData::from_owned(data);
-            fd.index = f.index;
+    let mut add = |name: &str, f: &crate::fonts::FoundFont, cjk: bool| -> bool {
+        let Some(data) = crate::fonts::load(f) else { return false };
+        let mut fd = FontData::from_owned(data);
+        fd.index = f.index;
+        if cjk {
             // CJK fonts sit higher and look larger than egui's Latin font; line them up.
             fd.tweak.scale = 0.92;
             fd.tweak.y_offset_factor = 0.12;
-            defs.font_data.insert("cjk".into(), Arc::new(fd));
-            for fam in [FontFamily::Proportional, FontFamily::Monospace] {
-                defs.families.entry(fam).or_default().push("cjk".into());
+        }
+        defs.font_data.insert(name.into(), Arc::new(fd));
+        for fam in [FontFamily::Proportional, FontFamily::Monospace] {
+            defs.families.entry(fam).or_default().push(name.into());
+        }
+        true
+    };
+    // The interface language's own letters come first, so Chinese, for one, gets Chinese shapes.
+    let lang = langs::find(cfg.ui_lang()).unwrap_or_else(langs::english);
+    let mut script_ok = lang.script.built_in();
+    if !script_ok && lang.script != langs::Script::Japanese {
+        if let Some(f) = crate::fonts::find_script_font(lang.script) {
+            script_ok = add("interface-script", &f, lang.script.cjk());
+        }
+    }
+    let japanese = crate::fonts::find_ui_font(&cfg.overlay.font_path).is_some_and(|f| add("cjk", &f, true));
+    if lang.script == langs::Script::Japanese {
+        script_ok = japanese;
+    }
+    if all_scripts {
+        // Only fonts already on this computer (nothing is downloaded just for the menu).
+        let mut seen = HashSet::new();
+        for s in langs::LANGUAGES.iter().map(|l| l.script) {
+            if s.built_in() || s == langs::Script::Japanese || s == lang.script || !seen.insert(s) {
+                continue;
             }
-            found = true;
+            if let Some(f) = crate::fonts::find_script_font(s) {
+                add(&format!("names-{s:?}"), &f, s.cjk());
+            }
         }
     }
     ctx.set_fonts(defs);
-    found
+    UiFonts { japanese, script_ok }
 }
 
 fn apply_theme(ctx: &egui::Context) {

@@ -1,0 +1,343 @@
+# BabelCraft interface text - English (the original). One text per line: <id><TAB><text>.
+# The id is the FNV-1a 32-bit hash of the English text (src/i18n.rs: text_id). Translations in
+# assets/i18n/<language code>.txt use the same ids; a missing line shows the English text.
+f249a927	BabelCraft
+12c2c4a7	English → 日本語  ·  on-screen text + voice dubbing
+7ac2b86a	English → Japanese  ·  on-screen text + voice dubbing
+0d581bdc	English → 日本語 video translator
+99665e53	English → Japanese video translator
+68cc88b7	loading
+116c2a94	● Working in the background
+3787b897	● Idle
+4b058728	Settings
+461471f8	Log console
+9a73db9b	Language
+66eac25a	Interface language
+c9ea4271	Saved automatically.
+4ac0e87d	Reset to defaults
+04a57fc2	Clear
+6aef5c37	Copy all
+e1e4263c	lines
+eaaaf67b	●
+1d833b86	1  ·  Choose your video
+e9d74ce0	English video
+7c11ee84	Save Japanese video as
+8f0cc624	MP4, MKV, MOV or AVI — or drop a file on the window
+757376db	where the translated video is written (.mp4 / .mkv / .mov)
+23b63f91	Browse…
+54f47c20	Choose an English video
+ddb01179	Save the Japanese video
+28866588	2  ·  Translate to Japanese
+f6df38d6	▶  Start translating
+bcf96ba5	■  Cancel
+be98d55f	Stopping…
+c5013a6b	Runs in the background, completely silently.
+67d9cd9f	Finished — your Japanese video is ready
+87e33e9f	Stopped with an error
+a62b09bc	Cancelled
+73727cef	Starting…
+28e0532d	Ready when you are
+42cea59a	Overall
+2e160bcd	Stage
+92cdd63b	Elapsed
+f91aa552	Time left (ETA)
+1661fdff	This stage
+201d285c	estimating…
+8a6979e4	Saved
+63890d31	Show in folder
+9172da18	Cancelled — all helper processes were stopped.
+e4a9bc35	Silent background mode — nothing is played or previewed. Minimise BabelCraft and keep working.
+8d13c0e3	Choose an input video and an output file first.
+fbaf1ee6	Extracting Media
+66c3806e	Scanning Screen Text (OCR)
+05acb2e4	Transcribing Speech (Whisper)
+899d6f82	Translating to Japanese
+5652a5fb	Synthesizing Japanese Voice
+851e2700	Rendering Final Video
+f2bc3d23	Setup checks
+8d94ad89	Re-check
+5a2c73d7	checking…
+4da65a54	⬇  Set up automatically
+bb271adb	Downloads FFmpeg, the offline AI brain, the VOICEVOX voice, models and fonts into BabelCraft's own folder — nothing to install by hand.
+c6505380	Looking for FFmpeg, Tesseract, Whisper, a Japanese font, the translator and the voice engine…
+6964bb19	Download
+4b7f7705	Stop
+a07de7ca	Setting up:
+8d063a47	Downloading
+bbdf4418	FFmpeg
+7cf52b12	Text reader (OCR)
+d29b285f	Japanese font
+c7d2f814	Whisper model
+c02c6b89	Whisper engine
+3dcc9590	Japanese voice
+55d54d8f	Translator
+8b3655e6	BabelCraft sets this up by itself: press "Set up automatically", or just start a job (it is fetched on first use).
+8a85291c	Switch Settings → On-screen text → engine to "Built-in" (nothing to install), or install Tesseract.
+4937ee8d	Install the English data (tesseract-ocr-eng), or switch to the Built-in engine.
+6b632701	Use the BabelCraft download with Whisper built in ("-metal" on Mac), or `brew install whisper-cpp`.
+d278d570	VOICEVOX: install from voicevox.hiroshiba.jp and leave it running. Or pick edge-tts / Piper / an OpenAI-compatible TTS in Settings → Japanese voice.
+2070378a	Install Ollama (ollama.com), run `ollama pull qwen2.5:7b`, or switch to DeepL / an OpenAI-compatible API in Settings.
+55805a31	Run `ollama pull qwen2.5:7b` (or set another model in Settings → Translation).
+ee61f277	Enter an API key in Settings → Translation (or set OPENAI_API_KEY).
+ff124719	Enter your DeepL API key in Settings → Translation (or set DEEPL_AUTH_KEY).
+249730cc	Translation
+5d55a9d8	Ollama (local, offline)
+0baef3c4	OpenAI-compatible API
+175a60e9	DeepL API
+74398dc7	Server URL
+72863919	Base URL
+8285e8fa	Model
+e9efc6ec	API key
+4d405ca8	Runs fully offline. Try qwen2.5:7b, gemma2:9b or llama3.1:8b.
+af8e4a51	OpenAI, LM Studio, llama.cpp server, vLLM… Empty key uses OPENAI_API_KEY.
+c3155622	Free keys end in :fx. Empty key uses DEEPL_AUTH_KEY.
+3bc0cab6	Lines per request
+c00aa5ce	Style / glossary hint
+6bf8fbb6	Test translation
+19d1cb65	Testing…
+00ae74ed	Audio mixing
+c1611838	Replace the English voice (Japanese only)
+212c5abc	Duck original audio under the Japanese dub
+201aac68	original volume
+fa79499a	Duck the whole video (not only while speaking)
+0784b382	dub volume
+58097c54	max speed-up
+83e9f7d5	Lines that run long are sped up (up to this limit) so they end before the next line.
+f49be31e	Also keep the English audio as a 2nd track
+f6393ba1	On-screen text (OCR)
+327bea24	Translate on-screen English text
+0ad0f496	Only when the picture changes (fast)
+a1c6f6f6	Every sample
+12b8f364	Sample every
+66bea3b2	change sensitivity
+84522f61	min confidence
+ca3d4b73	Ignore text shown less than
+acc570d0	smallest text size
+ffa019e3	Pick a 4–14B general model in Settings → Translation (press List), or use the built-in offline AI brain.
+45086469	Smaller lines (menus, buttons and labels in screen recordings) are left out. 0 keeps everything.
+9841b69a	Layout mode
+db61155b	Engine
+be1d82a5	Built-in
+d84f3165	Tesseract
+a945985f	box opacity
+126befb6	Auto
+0c940e46	auto-detect
+0fc0d8e9	3 · automatic page layout
+7fb0f48a	6 · single text block
+3c8b4723	11 · sparse text (video)
+c44a2f35	12 · sparse text + OSD
+2057306e	custom
+724ccc6a	Speech (Whisper)
+527a1b52	Transcribe and dub spoken English
+53dd6ba6	Built-in Whisper needs a build with --features whisper (see README).
+19dc307e	Default
+4e02cbb1	Use GPU when available
+38297885	CPU threads (0 = auto)
+943bd539	tiny.en · 75 MB · fastest
+a72fe0d0	base.en · 142 MB · recommended
+d4e9b0d4	small.en · 466 MB · better
+f6ebc93e	medium.en · 1.5 GB · best (slow)
+b645becd	large-v3-turbo · 1.6 GB · GPU
+05f6f560	Japanese voice (TTS)
+00ec4476	VOICEVOX (local HTTP)
+b2512860	OpenAI-compatible / Kokoro
+ccc764b6	edge-tts (online)
+511c9bd5	Piper (local CLI)
+242750f2	Engine URL
+38460e3b	Speaker ID
+d8d2cfac	Free, offline, high quality. Start the VOICEVOX app first.
+27d1a499	Voice
+4d2cfde6	e.g. Kokoro-FastAPI locally (voice jf_alpha) or OpenAI (tts-1).
+011e7010	Needs internet (`pip install edge-tts`). ja-JP-NanamiNeural / ja-JP-KeitaNeural.
+e6334598	Voice model
+852c5410	no model selected
+f9cb6003	Tools & output
+ffe78236	quality (CRF)
+ae0ad188	Encoder speed
+c216d626	Keep temporary files (for debugging)
+030b947c	Settings file:
+4814e1f4	BabelCraft offline AI brain (built in)
+16635ed8	llama.cpp server
+a2986a6b	OpenRouter (hundreds of models)
+adc85c3d	Other OpenAI-compatible server
+cbd2d62c	translation
+8b60ec45	translation · speech recognition · voice
+43a23a38	translation · speech recognition
+30f05723	Groq (very fast Whisper)
+aebf9e69	Whisper server on this computer (Speaches…)
+5bd0f1c4	Kokoro-FastAPI (on this computer)
+650403a8	OpenAI voices (online)
+28da3881	Runs many open AI models on your computer (translation).
+dcf43fb3	Desktop app for downloading and running AI models (translation).
+6a618244	Free offline ChatGPT-style app with a built-in server (translation).
+576e209d	Free Japanese voice app with many characters (voice).
+839c5457	Small local voice server with Japanese voices (voice).
+7ad23e14	Fast offline voice program; needs a Japanese voice model (voice).
+a6b89890	Microsoft's online neural voices, no key needed (voice).
+ede4f24c	Free translation server you can run yourself (translation).
+c959a878	Whisper speech-recognition server for your computer (speech).
+2bc11867	Alternative text reader for on-screen text (OCR).
+8c5703ff	Qwen 2.5 · 1.5B (small and fast)
+bafe9c62	Qwen 3 · 4B (recommended)
+8b8b111a	Gemma 3 · 4B (alternative)
+73187fe5	Qwen 2.5 · 7B (best quality)
+fad2714f	For older computers or 4 GB of memory. Simpler Japanese.
+6839dc74	Good natural Japanese; runs on most computers with 8 GB of memory.
+7af7e30c	Google's open model; a different style of Japanese to compare with Qwen.
+9e1e444a	Best translations; wants 16 GB of memory or a graphics card.
+bbc9da8e	Offline AI brain
+b334b4ca	Who translates
+a36951fd	On this computer — free, private, offline
+55749e52	Online services — need an account and API key
+0b610402	AI model
+00934d1a	Use the graphics card (faster; Vulkan)
+99d1bac3	Downloaded — ready to translate offline
+aa33a0de	Downloads by itself on first use
+e788bf35	Download now
+d6d15ddf	Runs on your computer: nothing is sent online, no account or key needed.
+ab0b938b	All models & downloads…
+682437f6	Start the app's local server first, then press List to pick a loaded model.
+2fe90724	Press List to see the models your account can use.
+d276bf6c	claude-opus-5-5 is the most capable; claude-sonnet-5-5 and claude-haiku-5-5 cost less.
+f7b16852	Your own LibreTranslate server (no key needed) or a hosted one with a key.
+03a9735a	Get the app ↗
+8aa63bd0	Get an API key ↗
+63772c47	Testing… (starting the AI brain)
+8d2937a1	List
+ef7e1cf8	Ask the service which models it has
+0b957a7e	asking the service…
+77aa80e6	Pick a model
+a42cc3de	Online / server API
+113e7299	The video's sound is uploaded to this service to be transcribed. OpenAI and Groq need an API key.
+79f47a0a	Get the server ↗
+8be167fe	VOICEVOX (free, offline)
+2d20e7a9	OpenAI voices / Kokoro (API)
+74dc9b9b	Computer's own Japanese voice
+38181613	Start VOICEVOX by itself when needed
+a8149a8d	Free, offline, high quality. BabelCraft downloads the VOICEVOX engine (1.9 GB) the first time. Credit the voice when you publish (e.g. "VOICEVOX:ずんだもん").
+566ec4bc	VOICEVOX website and terms ↗
+6dc9db9c	e.g. Kokoro-FastAPI locally (voice jf_alpha) or OpenAI (gpt-4o-mini-tts / tts-1, voices alloy, nova…).
+34db4ba0	Voice name
+238d14f9	Uses a Japanese voice built into Windows or macOS. Leave the name empty to use the first one found.
+e9431edf	Found:
+2d7709f3	Zundamon · normal
+5d8c1d94	Zundamon · sweet
+99ad8c08	Shikoku Metan · normal
+831f9805	Shikoku Metan · sweet
+b431b666	Kasukabe Tsumugi
+ed1e4728	Namine Ritsu
+7a204a92	Amehare Hau
+70641198	Kurono Takehiro
+01006773	Shirakami Kotarou
+40603730	Aoyama Ryusei
+53f6ec6d	Meimei Himari
+308e1da9	Kyushu Sora
+a05669b6	Use the offline AI brain
+b917e82d	Paste the service's API key in Settings → Speech (or on the AI models & downloads page), or switch back to whisper-cli (free, offline).
+a042c25b	BabelCraft downloads the free VOICEVOX engine by itself (press "Set up automatically" or just start a job). When you publish a video, credit the voice, e.g. "VOICEVOX:ずんだもん".
+8584f7c1	Windows: Settings → Time & language → Speech → Add voices → Japanese. Mac: System Settings → Accessibility → Spoken Content → System voice → Manage voices → Japanese. Or choose VOICEVOX (free, downloaded automatically).
+5f77ac51	Pick VOICEVOX in Settings → Japanese voice (free, downloaded automatically), or start the voice app/server you chose.
+ba141bed	Install Ollama or LM Studio (see AI models & downloads), or use an online service in Settings → Translation.
+04045eb9	Paste your Anthropic API key in Settings → Translation, or use the free offline AI brain.
+cd6aeedd	Start your LibreTranslate server, or use the free offline AI brain.
+1399ecab	Install Ollama (ollama.com) and run `ollama pull qwen2.5:7b` — or press the button to use BabelCraft's own offline AI brain instead (no install).
+29e7a63c	Open the app and start its local server (LM Studio: Developer → Start server; Jan: Settings → Local API Server) — or use the built-in offline AI brain.
+8c7fc587	Paste your API key in Settings → Translation (or on the AI models & downloads page), or use the free offline AI brain.
+cc44fa0d	▶  Translate a video
+8a97d217	⬇  AI models & downloads
+04058df0	AI models & downloads
+0815aad4	Refresh
+46ec8da6	Everything BabelCraft uses, where it comes from, and what is already on this computer. Downloads go into BabelCraft's own folder — nothing is installed into your system.
+8d304745	Folder:
+ecbbac42	Needed for every video (downloaded automatically)
+660ec0f4	ready
+eb5c7115	not downloaded yet
+7804ddd3	Website ↗
+a31e273b	Reads the video and writes the finished Japanese version.
+314d7fdc	Text-reading models (OCR)
+6f056690	Find and read the English text shown in the picture.
+e7bb35f1	Japanese font (Noto Sans JP)
+79f59e25	Draws the Japanese text over the video, so it never shows as □□□.
+a1cfe1c4	use Online API or the Whisper-built-in download
+5044f7bd	Whisper speech tool (whisper.cpp)
+69c313d8	Turns the English speech into text with timings.
+54dbde20	Whisper speech model
+970b4034	Bigger models hear more accurately but take longer.
+6d3ffa7c	Offline AI brain — translation on your own computer
+28bc3f50	No account, no API key, and nothing leaves your computer. BabelCraft downloads the llama.cpp engine and the model you pick, runs it hidden only while translating, then closes it.
+f9328dff	not available for this computer
+7794b21a	AI brain engine (llama.cpp)
+6de93ce5	The program that runs the AI model.
+016066fd	in use
+2d6293d0	downloaded
+a48e99aa	Licence:
+0ef2e7dc	Model page ↗
+21a5901d	Remove
+dbb8a7a8	Use for translation
+e4089c1b	Or use the free Ollama app
+6d4b71f5	No models yet — download one below.
+147eb74c	running
+1471d28b	models
+529618e6	Use Ollama for translation
+632b93f7	Download a model into Ollama:
+e6bfba38	Model library ↗
+fe001abd	not running
+89b641a3	Free app that runs many open AI models. Install it, and BabelCraft can use it and download models into it.
+1b155e86	Get Ollama ↗
+af47f3df	running ·
+186fb844	downloaded · starts by itself
+e5920759	VOICEVOX app found · starts by itself
+65a00c42	VOICEVOX voice engine
+0d966565	Free, offline, natural Japanese voices. Credit the voice when you publish, e.g. "VOICEVOX:ずんだもん".
+0cad0cf1	Terms ↗
+266842d1	no Japanese voice installed
+fd23b2f4	not available on Linux
+ee7e05b6	Windows and macOS can add a Japanese voice for free in their speech settings.
+b65323cd	Speech settings ↗
+d2f20db6	Other free apps BabelCraft can work with
+c0c6cd33	Online AI services — paste your API key
+99c6fd5e	Keys stay in BabelCraft's settings file on this computer. Online services charge for what you use; pick one in Settings → Translation or Speech.
+74c866bf	key saved
+327e1475	key from environment
+1265c286	Get a key ↗
+b2c9aee7	paste API key
+e6a52873	Only needed once. If you cancel, what has downloaded is kept and carries on next time.
+16705937	What has downloaded so far is kept: next time it carries on where it stopped.
+ad7e2c40	Please wait…
+9d34077c	About BabelCraft
+62f7c629	Free software: you may share and change it under the GNU General Public License, version 3 or (at your option) any later version. It comes with NO WARRANTY.
+c571731a	Licence (GNU GPL v3) ↗
+ae71d394	Source code ↗
+62d26c08	Time left (download)
+fe6c570e	Unpacking FFmpeg
+7c3e591d	Text-detection model
+90f96e59	Text-recognition model
+f1805489	Whisper tool (whisper.cpp)
+02807710	Unpacking whisper.cpp
+0f155e49	Looking up the AI brain engine (llama.cpp)
+f77b5742	Unpacking the AI brain engine
+cfddb4cd	Looking up the newest VOICEVOX engine
+544c71a5	Joining the VOICEVOX parts
+7efd1c39	Unpacking VOICEVOX (about a minute)
+feb4db1b	One-time setup · download {0} of {1}…
+3131ba31	{0} of {1}
+57b7e123	{0}/s
+26cdd5ba	carrying on from last time
+53d004e2	{0} left
+1cdbb8d4	AI brain model {0}
+961c54b6	Whisper model {0}
+96a241fc	VOICEVOX voice engine (part {0} of {1})
+3b59fa88	Language of BabelCraft's buttons and menus
+3eb0dc0a	Search languages…
+335bbe86	Ready to use
+3f21323f	More languages — BabelCraft's AI translates the buttons and menus the first time you choose one
+29060690	Translating BabelCraft into {0}…
+fcb70d79	Uses the translator chosen in Settings → Translation. The offline AI brain downloads about 2.5 GB the first time.
+280bb407	Right-to-left writing may show in the wrong order in places.
+99e87037	Wait until the video has finished translating.
+e7e8b162	Could not translate the buttons and menus
+e3602340	Downloading a font for {0}…
+2d107cdd	No language matches.
+917d4a36	Translated by AI
+be692ced	Translate again
+e1fdb80e	Wait until the current download has finished.

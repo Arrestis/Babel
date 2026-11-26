@@ -16,6 +16,8 @@ pub enum TextKind {
     OnScreen,
     /// Spoken lines; will be read aloud by the Japanese voice.
     Speech,
+    /// BabelCraft's own buttons, menus and messages, into this interface language.
+    Interface(&'static crate::langs::Lang),
 }
 
 /// A problem with the translation service itself (no key, not running, refused, crashed):
@@ -114,11 +116,61 @@ pub fn preflight(cfg: &Config) -> Result<Vec<String>> {
 }
 
 impl TextKind {
-    fn tag(self) -> &'static str {
+    fn tag(self) -> String {
         match self {
-            TextKind::OnScreen => "screen",
-            TextKind::Speech => "speech",
+            TextKind::OnScreen => "screen".into(),
+            TextKind::Speech => "speech".into(),
+            TextKind::Interface(l) => format!("ui-{}", l.code),
         }
+    }
+}
+
+/// DeepL's name for an interface language (None: DeepL can't translate into it).
+fn deepl_target(l: &crate::langs::Lang) -> Option<&'static str> {
+    Some(match l.code {
+        "ar" => "AR",
+        "bg" => "BG",
+        "cs" => "CS",
+        "da" => "DA",
+        "de" => "DE",
+        "el" => "EL",
+        "es" => "ES",
+        "et" => "ET",
+        "fi" => "FI",
+        "fr" => "FR",
+        "he" => "HE",
+        "hu" => "HU",
+        "id" => "ID",
+        "it" => "IT",
+        "ja" => "JA",
+        "ko" => "KO",
+        "lt" => "LT",
+        "lv" => "LV",
+        "no" => "NB",
+        "nl" => "NL",
+        "pl" => "PL",
+        "pt" => "PT-BR",
+        "ro" => "RO",
+        "ru" => "RU",
+        "sk" => "SK",
+        "sl" => "SL",
+        "sv" => "SV",
+        "th" => "TH",
+        "tr" => "TR",
+        "uk" => "UK",
+        "vi" => "VI",
+        "zh-Hans" => "ZH-HANS",
+        "zh-Hant" => "ZH-HANT",
+        _ => return None,
+    })
+}
+
+/// LibreTranslate's name for an interface language.
+fn libre_target(l: &crate::langs::Lang) -> String {
+    match l.code {
+        "zh-Hans" => "zh".into(),
+        "zh-Hant" => "zt".into(),
+        c => c.split('-').next().unwrap_or(c).to_string(),
     }
 }
 
@@ -251,8 +303,8 @@ impl Translator {
 
     fn translate_batch(&self, texts: &[String], kind: TextKind) -> Result<Vec<String>> {
         match self.cfg.translation.backend {
-            TranslationBackend::DeepL => self.deepl(texts),
-            TranslationBackend::LibreTranslate => self.libre(texts),
+            TranslationBackend::DeepL => self.deepl(texts, kind),
+            TranslationBackend::LibreTranslate => self.libre(texts, kind),
             TranslationBackend::BuiltinBrain
             | TranslationBackend::Ollama
             | TranslationBackend::OpenAiCompatible
@@ -310,6 +362,7 @@ impl Translator {
         let what = match kind {
             TextKind::OnScreen => "on-screen text (titles, captions, slide text, labels) from a video. Keep translations short so they fit where the English was",
             TextKind::Speech => "spoken lines from a video, in order. They will be read aloud by a Japanese voice, so make them natural spoken Japanese and about as long as the English",
+            TextKind::Interface(l) => return interface_prompt(l),
         };
         format!(
             "You are a professional English-to-Japanese video localizer. You translate {what}. {} \
@@ -441,12 +494,16 @@ impl Translator {
     }
 
     /// LibreTranslate (POST /translate with a list of texts).
-    fn libre(&self, texts: &[String]) -> Result<Vec<String>> {
+    fn libre(&self, texts: &[String], kind: TextKind) -> Result<Vec<String>> {
         let base = self.cfg.translation.libre_url.trim().trim_end_matches('/');
         if base.is_empty() {
             bail!("enter the LibreTranslate address in Settings → Translation");
         }
-        let mut body = json!({ "q": texts, "source": "en", "target": "ja", "format": "text" });
+        let target = match kind {
+            TextKind::Interface(l) => libre_target(l),
+            _ => "ja".into(),
+        };
+        let mut body = json!({ "q": texts, "source": "en", "target": target, "format": "text" });
         let key = self.cfg.key_for("libre");
         if !key.is_empty() {
             body["api_key"] = json!(key);
@@ -469,13 +526,19 @@ impl Translator {
         }
     }
 
-    fn deepl(&self, texts: &[String]) -> Result<Vec<String>> {
+    fn deepl(&self, texts: &[String], kind: TextKind) -> Result<Vec<String>> {
         let key = self.cfg.key_for("deepl");
         if key.is_empty() {
             return Err(service_problem(format!("DeepL needs an API key (Settings → Translation). {SWITCH_HINT}")));
         }
+        let target = match kind {
+            TextKind::Interface(l) => deepl_target(l).ok_or_else(|| {
+                service_problem(format!("DeepL can't translate into {} — choose another translator in Settings → Translation", l.english))
+            })?,
+            _ => "JA",
+        };
         let host = if key.ends_with(":fx") { "https://api-free.deepl.com" } else { "https://api.deepl.com" };
-        let body = json!({ "text": texts, "source_lang": "EN", "target_lang": "JA" });
+        let body = json!({ "text": texts, "source_lang": "EN", "target_lang": target });
         let mut resp = self
             .agent
             .post(format!("{host}/v2/translate"))
@@ -502,6 +565,26 @@ impl Translator {
         let r = self.translate_batch(&["Hello! Welcome to the video.".to_string()], TextKind::Speech)?;
         Ok(clean_output(&r.into_iter().next().unwrap_or_default()))
     }
+}
+
+/// Instructions for translating BabelCraft's own interface into another language.
+fn interface_prompt(l: &crate::langs::Lang) -> String {
+    format!(
+        "You are a professional software localizer. You translate the user interface of BabelCraft, a desktop app that \
+         translates English videos into Japanese: it reads on-screen text (OCR), transcribes speech (Whisper), translates, \
+         dubs with a Japanese voice and renders the finished video. Translate every numbered item from English into {english} \
+         ({native}). The items are button labels, menu entries, headings, hints and messages: make them short, natural and \
+         consistent, the way {english} software says them (Settings, Download, Cancel…). Keep exactly as they are: product, \
+         service and file names (BabelCraft, Whisper, whisper.cpp, VOICEVOX, FFmpeg, FFprobe, Ollama, LM Studio, Jan, llama.cpp, \
+         OpenAI, Claude, Gemini, DeepL, OpenRouter, Groq, DeepSeek, Mistral, LibreTranslate, Kokoro, Piper, edge-tts, Tesseract, \
+         Noto Sans JP, Qwen, Gemma, GitHub, Vulkan, CUDA, Metal), abbreviations (AI, API, GPU, CPU, OCR, TTS, MP4, MKV, MOV, AVI, \
+         SRT, CRF, GB, MB), blanks like {{0}} and {{1}}, symbols (▶ ■ ● ↗ ⬇ · … → ✓ ×) and Japanese text such as 日本語. \
+         Translate the complete meaning of every item; never add notes or explanations. \
+         Reply ONLY with JSON of the form {{\"translations\": {{\"01\": \"...\", \"02\": \"...\"}}}} using exactly the same numbers, \
+         one {english} translation per number.",
+        english = l.english,
+        native = l.native,
+    )
 }
 
 /// "01", "02" … — numbers that sort in order as text too.

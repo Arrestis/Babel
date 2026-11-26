@@ -1,0 +1,341 @@
+# BabelCraft interface text - 简体中文 (Chinese, Simplified), translated by hand.
+f249a927	BabelCraft
+12c2c4a7	英语 → 日本語  ·  画面文字 + 配音
+7ac2b86a	英语 → 日语  ·  画面文字 + 配音
+0d581bdc	英语 → 日本語 视频翻译工具
+99665e53	英语 → 日语 视频翻译工具
+68cc88b7	加载中
+116c2a94	● 正在后台工作
+3787b897	● 空闲
+4b058728	设置
+461471f8	日志
+9a73db9b	语言
+66eac25a	界面语言
+c9ea4271	自动保存。
+4ac0e87d	恢复默认设置
+04a57fc2	清空
+6aef5c37	全部复制
+e1e4263c	行
+eaaaf67b	●
+1d833b86	1  ·  选择视频
+e9d74ce0	英语视频
+7c11ee84	日语视频另存为
+8f0cc624	MP4、MKV、MOV 或 AVI — 也可以把文件拖到窗口里
+757376db	翻译后视频的保存位置（.mp4 / .mkv / .mov）
+23b63f91	浏览…
+54f47c20	选择英语视频
+ddb01179	保存日语视频
+28866588	2  ·  翻译成日语
+f6df38d6	▶  开始翻译
+bcf96ba5	■  取消
+be98d55f	正在停止…
+c5013a6b	在后台运行，全程静音。
+67d9cd9f	完成 — 日语视频已生成
+87e33e9f	因出错而停止
+a62b09bc	已取消
+73727cef	正在启动…
+28e0532d	随时可以开始
+42cea59a	总进度
+2e160bcd	阶段
+92cdd63b	已用时间
+f91aa552	剩余时间
+1661fdff	本阶段
+201d285c	估算中…
+8a6979e4	已保存：
+63890d31	在文件夹中显示
+9172da18	已取消 — 所有辅助进程都已停止。
+e4a9bc35	静默后台模式 — 不播放也不预览任何内容。可以最小化 BabelCraft 继续工作。
+8d13c0e3	请先选择输入视频和输出文件。
+fbaf1ee6	提取媒体
+66c3806e	识别画面文字（OCR）
+05acb2e4	转写语音（Whisper）
+899d6f82	翻译成日语
+5652a5fb	合成日语语音
+851e2700	渲染最终视频
+f2bc3d23	环境检查
+8d94ad89	重新检查
+5a2c73d7	检查中…
+4da65a54	⬇  自动安装
+bb271adb	把 FFmpeg、离线 AI 大脑、VOICEVOX 语音、模型和字体下载到 BabelCraft 自己的文件夹 — 无需手动安装。
+c6505380	正在查找 FFmpeg、Tesseract、Whisper、日文字体、翻译器和语音引擎…
+6964bb19	下载
+4b7f7705	停止
+a07de7ca	正在安装：
+8d063a47	正在下载
+bbdf4418	FFmpeg
+7cf52b12	文字识别（OCR）
+d29b285f	日文字体
+c7d2f814	Whisper 模型
+c02c6b89	Whisper 引擎
+3dcc9590	日语语音
+55d54d8f	翻译器
+8b3655e6	BabelCraft 会自动安装：点击“自动安装”，或直接开始任务（首次使用时下载）。
+8a85291c	把 设置 → 画面文字 → 引擎 改成“内置”（无需安装），或安装 Tesseract。
+4937ee8d	安装英语数据（tesseract-ocr-eng），或切换到内置引擎。
+6b632701	使用内置 Whisper 的 BabelCraft 版本（Mac 用“-metal”），或运行 `brew install whisper-cpp`。
+d278d570	VOICEVOX：从 voicevox.hiroshiba.jp 安装并保持运行。也可以在 设置 → 日语语音 中选择 edge-tts / Piper / 兼容 OpenAI 的 TTS。
+2070378a	安装 Ollama（ollama.com）并运行 `ollama pull qwen2.5:7b`，或在设置中改用 DeepL / 兼容 OpenAI 的 API。
+55805a31	运行 `ollama pull qwen2.5:7b`（或在 设置 → 翻译 中换一个模型）。
+ee61f277	在 设置 → 翻译 中输入 API 密钥（或设置 OPENAI_API_KEY）。
+ff124719	在 设置 → 翻译 中输入 DeepL API 密钥（或设置 DEEPL_AUTH_KEY）。
+249730cc	翻译
+5d55a9d8	Ollama（本地、离线）
+0baef3c4	兼容 OpenAI 的 API
+175a60e9	DeepL API
+74398dc7	服务器 URL
+72863919	基础 URL
+8285e8fa	模型
+e9efc6ec	API 密钥
+4d405ca8	完全离线运行。可以试试 qwen2.5:7b、gemma2:9b 或 llama3.1:8b。
+af8e4a51	OpenAI、LM Studio、llama.cpp 服务器、vLLM… 密钥留空则使用 OPENAI_API_KEY。
+c3155622	免费密钥以 :fx 结尾。密钥留空则使用 DEEPL_AUTH_KEY。
+3bc0cab6	每次请求的行数
+c00aa5ce	风格 / 术语提示
+6bf8fbb6	测试翻译
+19d1cb65	测试中…
+00ae74ed	混音
+c1611838	替换英语语音（只保留日语）
+212c5abc	在日语配音下压低原声
+201aac68	原声音量
+fa79499a	整段视频都压低（不只在说话时）
+0784b382	配音音量
+58097c54	最大加速
+83e9f7d5	过长的台词会加速（不超过此上限），以便在下一句之前结束。
+f49be31e	同时保留英语音轨作为第 2 音轨
+f6393ba1	画面文字（OCR）
+327bea24	翻译画面上的英语文字
+0ad0f496	仅在画面变化时（快）
+a1c6f6f6	每个采样
+12b8f364	采样间隔
+66bea3b2	变化灵敏度
+84522f61	最低置信度
+ca3d4b73	忽略显示时间短于
+acc570d0	最小文字大小
+ffa019e3	在 设置 → 翻译 中选择 4–14B 的通用模型（点击“列表”），或使用内置的离线 AI 大脑。
+45086469	较小的文字行（录屏中的菜单、按钮和标签）会被忽略。0 表示全部保留。
+9841b69a	版面模式
+db61155b	引擎
+be1d82a5	内置
+d84f3165	Tesseract
+a945985f	底框不透明度
+126befb6	自动
+0c940e46	自动检测
+0fc0d8e9	3 · 自动版面分析
+7fb0f48a	6 · 单个文本块
+3c8b4723	11 · 稀疏文字（视频）
+c44a2f35	12 · 稀疏文字 + OSD
+2057306e	自定义
+724ccc6a	语音（Whisper）
+527a1b52	转写并配音英语对白
+53dd6ba6	内置 Whisper 需要用 --features whisper 编译（见 README）。
+19dc307e	默认
+4e02cbb1	有 GPU 时使用 GPU
+38297885	CPU 线程数（0 = 自动）
+943bd539	tiny.en · 75 MB · 最快
+a72fe0d0	base.en · 142 MB · 推荐
+d4e9b0d4	small.en · 466 MB · 更好
+f6ebc93e	medium.en · 1.5 GB · 最好（较慢）
+b645becd	large-v3-turbo · 1.6 GB · GPU
+05f6f560	日语语音（TTS）
+00ec4476	VOICEVOX（本地 HTTP）
+b2512860	兼容 OpenAI / Kokoro
+ccc764b6	edge-tts（在线）
+511c9bd5	Piper（本地命令行）
+242750f2	引擎 URL
+38460e3b	说话人 ID
+d8d2cfac	免费、离线、高质量。请先启动 VOICEVOX 应用。
+27d1a499	语音
+4d2cfde6	例如本地的 Kokoro-FastAPI（语音 jf_alpha）或 OpenAI（tts-1）。
+011e7010	需要联网（`pip install edge-tts`）。ja-JP-NanamiNeural / ja-JP-KeitaNeural。
+e6334598	语音模型
+852c5410	未选择模型
+f9cb6003	工具与输出
+ffe78236	画质（CRF）
+ae0ad188	编码速度
+c216d626	保留临时文件（用于排查问题）
+030b947c	设置文件：
+4814e1f4	BabelCraft 离线 AI 大脑（内置）
+16635ed8	llama.cpp 服务器
+a2986a6b	OpenRouter（数百个模型）
+adc85c3d	其他兼容 OpenAI 的服务器
+cbd2d62c	翻译
+8b60ec45	翻译 · 语音识别 · 语音
+43a23a38	翻译 · 语音识别
+30f05723	Groq（极快的 Whisper）
+aebf9e69	本机上的 Whisper 服务器（Speaches…）
+5bd0f1c4	Kokoro-FastAPI（本机）
+650403a8	OpenAI 语音（在线）
+28da3881	在你的电脑上运行许多开源 AI 模型（翻译）。
+dcf43fb3	下载并运行 AI 模型的桌面应用（翻译）。
+6a618244	免费的离线 ChatGPT 风格应用，带内置服务器（翻译）。
+576e209d	免费的日语语音应用，有很多角色（语音）。
+839c5457	带日语语音的小型本地语音服务器（语音）。
+7ad23e14	快速的离线语音程序；需要日语语音模型（语音）。
+a6b89890	微软的在线神经语音，无需密钥（语音）。
+ede4f24c	可以自己运行的免费翻译服务器（翻译）。
+c959a878	用于你电脑的 Whisper 语音识别服务器（语音）。
+2bc11867	画面文字的另一种识别器（OCR）。
+8c5703ff	Qwen 2.5 · 1.5B（小而快）
+bafe9c62	Qwen 3 · 4B（推荐）
+8b8b111a	Gemma 3 · 4B（备选）
+73187fe5	Qwen 2.5 · 7B（质量最好）
+fad2714f	适合较旧的电脑或 4 GB 内存。日语较简单。
+6839dc74	日语自然流畅；大多数有 8 GB 内存的电脑都能运行。
+7af7e30c	Google 的开源模型；日语风格不同，可与 Qwen 对比。
+9e1e444a	翻译效果最好；需要 16 GB 内存或显卡。
+bbc9da8e	离线 AI 大脑
+b334b4ca	由谁翻译
+a36951fd	在本机 — 免费、私密、离线
+55749e52	在线服务 — 需要账号和 API 密钥
+0b610402	AI 模型
+00934d1a	使用显卡（更快；Vulkan）
+99d1bac3	已下载 — 可以离线翻译
+aa33a0de	首次使用时自动下载
+e788bf35	立即下载
+d6d15ddf	在你的电脑上运行：不会把任何内容发到网上，无需账号或密钥。
+ab0b938b	全部模型与下载…
+682437f6	请先启动该应用的本地服务器，再点击“列表”选择已加载的模型。
+2fe90724	点击“列表”查看你的账号可用的模型。
+d276bf6c	claude-opus-5-5 能力最强；claude-sonnet-5-5 和 claude-haiku-5-5 更便宜。
+f7b16852	你自己的 LibreTranslate 服务器（无需密钥），或带密钥的托管服务器。
+03a9735a	获取应用 ↗
+8aa63bd0	获取 API 密钥 ↗
+63772c47	测试中…（正在启动 AI 大脑）
+8d2937a1	列表
+ef7e1cf8	询问服务有哪些模型
+0b957a7e	正在询问服务…
+77aa80e6	选择模型
+a42cc3de	在线 / 服务器 API
+113e7299	视频的声音会上传到此服务进行转写。OpenAI 和 Groq 需要 API 密钥。
+79f47a0a	获取服务器 ↗
+8be167fe	VOICEVOX（免费、离线）
+2d20e7a9	OpenAI 语音 / Kokoro（API）
+74dc9b9b	电脑自带的日语语音
+38181613	需要时自动启动 VOICEVOX
+a8149a8d	免费、离线、高质量。BabelCraft 会在首次使用时下载 VOICEVOX 引擎（1.9 GB）。发布时请注明语音（例如“VOICEVOX:ずんだもん”）。
+566ec4bc	VOICEVOX 网站与使用条款 ↗
+6dc9db9c	例如本地的 Kokoro-FastAPI（语音 jf_alpha）或 OpenAI（gpt-4o-mini-tts / tts-1，语音 alloy、nova…）。
+34db4ba0	语音名称
+238d14f9	使用 Windows 或 macOS 自带的日语语音。名称留空则使用找到的第一个。
+e9431edf	已找到：
+2d7709f3	Zundamon · 普通
+5d8c1d94	Zundamon · 甜美
+99ad8c08	Shikoku Metan · 普通
+831f9805	Shikoku Metan · 甜美
+b431b666	Kasukabe Tsumugi
+ed1e4728	Namine Ritsu
+7a204a92	Amehare Hau
+70641198	Kurono Takehiro
+01006773	Shirakami Kotarou
+40603730	Aoyama Ryusei
+53f6ec6d	Meimei Himari
+308e1da9	Kyushu Sora
+a05669b6	使用离线 AI 大脑
+b917e82d	在 设置 → 语音识别 中粘贴该服务的 API 密钥（或在“AI 模型与下载”页面），或改回 whisper-cli（免费、离线）。
+a042c25b	BabelCraft 会自动下载免费的 VOICEVOX 引擎（点击“自动安装”或直接开始任务）。发布视频时请注明语音，例如“VOICEVOX:ずんだもん”。
+8584f7c1	Windows：设置 → 时间和语言 → 语音 → 添加语音 → 日语。Mac：系统设置 → 辅助功能 → 朗读内容 → 系统语音 → 管理语音 → 日语。也可以选择 VOICEVOX（免费，自动下载）。
+5f77ac51	在 设置 → 日语语音 中选择 VOICEVOX（免费，自动下载），或启动你选的语音应用 / 服务器。
+ba141bed	安装 Ollama 或 LM Studio（见“AI 模型与下载”），或在 设置 → 翻译 中使用在线服务。
+04045eb9	在 设置 → 翻译 中粘贴 Anthropic API 密钥，或使用免费的离线 AI 大脑。
+cd6aeedd	启动你的 LibreTranslate 服务器，或使用免费的离线 AI 大脑。
+1399ecab	安装 Ollama（ollama.com）并运行 `ollama pull qwen2.5:7b` — 或点击按钮改用 BabelCraft 自带的离线 AI 大脑（无需安装）。
+29e7a63c	打开该应用并启动它的本地服务器（LM Studio：Developer → Start server；Jan：Settings → Local API Server）— 或使用内置的离线 AI 大脑。
+8c7fc587	在 设置 → 翻译 中粘贴 API 密钥（或在“AI 模型与下载”页面），或使用免费的离线 AI 大脑。
+cc44fa0d	▶  翻译视频
+8a97d217	⬇  AI 模型与下载
+04058df0	AI 模型与下载
+0815aad4	刷新
+46ec8da6	BabelCraft 用到的所有东西、它们的来源，以及这台电脑上已有哪些。下载内容都放在 BabelCraft 自己的文件夹 — 不会在系统里安装任何东西。
+8d304745	文件夹：
+ecbbac42	每个视频都需要（自动下载）
+660ec0f4	已就绪
+eb5c7115	尚未下载
+7804ddd3	网站 ↗
+a31e273b	读取视频并写出最终的日语版本。
+314d7fdc	文字识别模型（OCR）
+6f056690	找到并读取画面中的英语文字。
+e7bb35f1	日文字体（Noto Sans JP）
+79f59e25	在视频上绘制日语文字，绝不会显示成 □□□。
+a1cfe1c4	请使用在线 API 或内置 Whisper 的版本
+5044f7bd	Whisper 语音工具（whisper.cpp）
+69c313d8	把英语语音转成带时间的文字。
+54dbde20	Whisper 语音模型
+970b4034	模型越大听得越准，但耗时越长。
+6d3ffa7c	离线 AI 大脑 — 在你自己的电脑上翻译
+28bc3f50	无需账号、无需 API 密钥，任何内容都不会离开你的电脑。BabelCraft 下载 llama.cpp 引擎和你选的模型，只在翻译时在后台运行，结束后关闭。
+f9328dff	此电脑不可用
+7794b21a	AI 大脑引擎（llama.cpp）
+6de93ce5	运行 AI 模型的程序。
+016066fd	使用中
+2d6293d0	已下载
+a48e99aa	许可证：
+0ef2e7dc	模型页面 ↗
+21a5901d	删除
+dbb8a7a8	用于翻译
+e4089c1b	或使用免费的 Ollama 应用
+6d4b71f5	还没有模型 — 请在下方下载一个。
+147eb74c	运行中
+1471d28b	个模型
+529618e6	使用 Ollama 翻译
+632b93f7	下载模型到 Ollama：
+e6bfba38	模型库 ↗
+fe001abd	未运行
+89b641a3	可以运行许多开源 AI 模型的免费应用。安装后，BabelCraft 就能使用它并往里面下载模型。
+1b155e86	获取 Ollama ↗
+af47f3df	运行中 ·
+186fb844	已下载 · 自动启动
+e5920759	已找到 VOICEVOX 应用 · 自动启动
+65a00c42	VOICEVOX 语音引擎
+0d966565	免费、离线、自然的日语语音。发布时请注明语音，例如“VOICEVOX:ずんだもん”。
+0cad0cf1	使用条款 ↗
+266842d1	未安装日语语音
+fd23b2f4	Linux 上不可用
+ee7e05b6	Windows 和 macOS 可以在语音设置中免费添加日语语音。
+b65323cd	语音设置 ↗
+d2f20db6	BabelCraft 还能配合使用的其他免费应用
+c0c6cd33	在线 AI 服务 — 粘贴你的 API 密钥
+99c6fd5e	密钥只保存在这台电脑上的 BabelCraft 设置文件里。在线服务按用量收费；请在 设置 → 翻译 或 语音识别 中选择。
+74c866bf	密钥已保存
+327e1475	来自环境变量的密钥
+1265c286	获取密钥 ↗
+b2c9aee7	粘贴 API 密钥
+e6a52873	只需要一次。如果取消，已下载的部分会保留，下次接着下载。
+16705937	已下载的部分会保留：下次会从中断处继续。
+ad7e2c40	请稍候…
+9d34077c	关于 BabelCraft
+62f7c629	自由软件：你可以依据 GNU 通用公共许可证第 3 版或（由你选择）任何更高版本分享和修改它。本软件不提供任何担保。
+c571731a	许可证（GNU GPL v3）↗
+ae71d394	源代码 ↗
+62d26c08	剩余时间（下载）
+fe6c570e	正在解压 FFmpeg
+7c3e591d	文字检测模型
+90f96e59	文字识别模型
+f1805489	Whisper 工具（whisper.cpp）
+02807710	正在解压 whisper.cpp
+0f155e49	正在查找 AI 大脑引擎（llama.cpp）
+f77b5742	正在解压 AI 大脑引擎
+cfddb4cd	正在查找最新的 VOICEVOX 引擎
+544c71a5	正在合并 VOICEVOX 分卷
+7efd1c39	正在解压 VOICEVOX（约一分钟）
+feb4db1b	首次设置 · 下载第 {0} 个，共 {1} 个…
+3131ba31	{0} / {1}
+57b7e123	{0}/秒
+26cdd5ba	从上次中断处继续
+53d004e2	剩余 {0}
+1cdbb8d4	AI 大脑模型 {0}
+961c54b6	Whisper 模型 {0}
+96a241fc	VOICEVOX 语音引擎（第 {0} 部分，共 {1} 部分）
+3b59fa88	BabelCraft 按钮和菜单的语言
+3eb0dc0a	搜索语言…
+335bbe86	可立即使用
+3f21323f	更多语言 — 首次选择时由 BabelCraft 的 AI 翻译按钮和菜单
+29060690	正在把 BabelCraft 翻译成 {0}…
+fcb70d79	使用 设置 → 翻译 中选择的翻译器。离线 AI 大脑首次使用时会下载约 2.5 GB。
+280bb407	从右向左书写的文字在个别地方可能显示顺序不对。
+99e87037	请等视频翻译完成。
+e7e8b162	无法翻译按钮和菜单
+e3602340	正在下载 {0} 的字体…
+2d107cdd	没有匹配的语言。
+917d4a36	AI 翻译
+be692ced	重新翻译
+e1fdb80e	请等当前下载完成。

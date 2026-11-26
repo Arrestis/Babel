@@ -30,6 +30,8 @@ mod checks;
 mod config;
 mod fonts;
 mod i18n;
+mod interface;
+mod langs;
 mod logfile;
 mod ocr;
 mod overlay;
@@ -55,7 +57,7 @@ fn main() -> eframe::Result<()> {
     while let Some(a) = args.next() {
         match a.as_str() {
             "--screenshot" => screenshot = args.next().map(PathBuf::from),
-            // Interface language for this session: --lang ja | en
+            // Interface language for this session: --lang <code or name> (en, ja, es, zh-Hans, Korean…)
             "--lang" => {
                 if let Some(l) = args.next() {
                     // SAFETY: set before any other thread is started.
@@ -76,7 +78,7 @@ fn main() -> eframe::Result<()> {
             "--help" | "-h" => {
                 println!(
                     "BabelCraft {} — English → Japanese video translator\n\n\
-                     Usage: babelcraft [--lang en|ja] [--page translate|downloads] [--screenshot <file.png>]\n\n\
+                     Usage: babelcraft [--lang <language code, e.g. en, ja, es, zh-Hans>] [--page translate|downloads] [--screenshot <file.png>]\n\n\
                      Copyright (C) 2026 BabelCraft contributors. Free software under the GNU GPL v3 or later\n\
                      <https://www.gnu.org/licenses/gpl-3.0.html>; there is NO WARRANTY.\n\
                      Source code: https://github.com/Arrestis/Babel",

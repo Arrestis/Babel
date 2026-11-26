@@ -1,0 +1,341 @@
+# BabelCraft interface text - 한국어 (Korean), translated by hand.
+f249a927	BabelCraft
+12c2c4a7	영어 → 日本語  ·  화면 텍스트 + 음성 더빙
+7ac2b86a	영어 → 일본어  ·  화면 텍스트 + 음성 더빙
+0d581bdc	영어 → 日本語 동영상 번역기
+99665e53	영어 → 일본어 동영상 번역기
+68cc88b7	불러오는 중
+116c2a94	● 백그라운드에서 작업 중
+3787b897	● 대기 중
+4b058728	설정
+461471f8	로그
+9a73db9b	언어
+66eac25a	인터페이스 언어
+c9ea4271	자동으로 저장됩니다.
+4ac0e87d	기본값으로 재설정
+04a57fc2	지우기
+6aef5c37	모두 복사
+e1e4263c	줄
+eaaaf67b	●
+1d833b86	1  ·  동영상 선택
+e9d74ce0	영어 동영상
+7c11ee84	일본어 동영상 저장 위치
+8f0cc624	MP4, MKV, MOV 또는 AVI — 창에 파일을 끌어다 놓아도 됩니다
+757376db	번역된 동영상을 저장할 위치 (.mp4 / .mkv / .mov)
+23b63f91	찾아보기…
+54f47c20	영어 동영상 선택
+ddb01179	일본어 동영상 저장
+28866588	2  ·  일본어로 번역
+f6df38d6	▶  번역 시작
+bcf96ba5	■  취소
+be98d55f	멈추는 중…
+c5013a6b	백그라운드에서 소리 없이 작동합니다.
+67d9cd9f	완료 — 일본어 동영상이 준비되었습니다
+87e33e9f	오류로 중지됨
+a62b09bc	취소됨
+73727cef	시작하는 중…
+28e0532d	준비되었습니다
+42cea59a	전체
+2e160bcd	단계
+92cdd63b	경과 시간
+f91aa552	남은 시간
+1661fdff	이번 단계
+201d285c	계산 중…
+8a6979e4	저장됨:
+63890d31	폴더에서 보기
+9172da18	취소됨 — 모든 보조 프로세스를 중지했습니다.
+e4a9bc35	조용한 백그라운드 모드 — 아무것도 재생하거나 미리 보여 주지 않습니다. BabelCraft를 최소화하고 다른 작업을 계속하세요.
+8d13c0e3	먼저 입력 동영상과 출력 파일을 선택하세요.
+fbaf1ee6	미디어 추출
+66c3806e	화면 텍스트 인식 (OCR)
+05acb2e4	음성 받아쓰기 (Whisper)
+899d6f82	일본어로 번역
+5652a5fb	일본어 음성 합성
+851e2700	최종 동영상 렌더링
+f2bc3d23	설치 점검
+8d94ad89	다시 점검
+5a2c73d7	점검 중…
+4da65a54	⬇  자동 설치
+bb271adb	FFmpeg, 오프라인 AI 두뇌, VOICEVOX 음성, 모델과 글꼴을 BabelCraft 전용 폴더에 내려받습니다 — 직접 설치할 것이 없습니다.
+c6505380	FFmpeg, Tesseract, Whisper, 일본어 글꼴, 번역기와 음성 엔진을 찾는 중…
+6964bb19	다운로드
+4b7f7705	중지
+a07de7ca	설치 중:
+8d063a47	다운로드 중
+bbdf4418	FFmpeg
+7cf52b12	텍스트 인식기 (OCR)
+d29b285f	일본어 글꼴
+c7d2f814	Whisper 모델
+c02c6b89	Whisper 엔진
+3dcc9590	일본어 음성
+55d54d8f	번역기
+8b3655e6	BabelCraft가 알아서 설치합니다: '자동 설치'를 누르거나 그냥 작업을 시작하세요 (처음 사용할 때 내려받습니다).
+8a85291c	설정 → 화면 텍스트 → 엔진을 '내장'으로 바꾸거나 (설치 불필요) Tesseract를 설치하세요.
+4937ee8d	영어 데이터(tesseract-ocr-eng)를 설치하거나 내장 엔진으로 바꾸세요.
+6b632701	Whisper가 내장된 BabelCraft 버전(Mac은 '-metal')을 쓰거나 `brew install whisper-cpp`를 실행하세요.
+d278d570	VOICEVOX: voicevox.hiroshiba.jp에서 설치하고 실행해 두세요. 또는 설정 → 일본어 음성에서 edge-tts / Piper / OpenAI 호환 TTS를 고르세요.
+2070378a	Ollama(ollama.com)를 설치하고 `ollama pull qwen2.5:7b`를 실행하거나, 설정에서 DeepL / OpenAI 호환 API로 바꾸세요.
+55805a31	`ollama pull qwen2.5:7b`를 실행하세요 (또는 설정 → 번역에서 다른 모델을 고르세요).
+ee61f277	설정 → 번역에 API 키를 입력하세요 (또는 OPENAI_API_KEY를 설정하세요).
+ff124719	설정 → 번역에 DeepL API 키를 입력하세요 (또는 DEEPL_AUTH_KEY를 설정하세요).
+249730cc	번역
+5d55a9d8	Ollama (로컬, 오프라인)
+0baef3c4	OpenAI 호환 API
+175a60e9	DeepL API
+74398dc7	서버 URL
+72863919	기본 URL
+8285e8fa	모델
+e9efc6ec	API 키
+4d405ca8	완전히 오프라인으로 작동합니다. qwen2.5:7b, gemma2:9b 또는 llama3.1:8b를 써 보세요.
+af8e4a51	OpenAI, LM Studio, llama.cpp 서버, vLLM… 키를 비워 두면 OPENAI_API_KEY를 씁니다.
+c3155622	무료 키는 :fx로 끝납니다. 키를 비워 두면 DEEPL_AUTH_KEY를 씁니다.
+3bc0cab6	요청당 줄 수
+c00aa5ce	스타일 / 용어 힌트
+6bf8fbb6	번역 테스트
+19d1cb65	테스트 중…
+00ae74ed	오디오 믹싱
+c1611838	영어 음성 교체 (일본어만)
+212c5abc	일본어 더빙 아래로 원래 오디오 줄이기
+201aac68	원래 음량
+fa79499a	동영상 전체 줄이기 (말할 때만이 아니라)
+0784b382	더빙 음량
+58097c54	최대 가속
+83e9f7d5	긴 대사는 다음 대사 전에 끝나도록 (이 한도까지) 빨라집니다.
+f49be31e	영어 오디오도 두 번째 트랙으로 유지
+f6393ba1	화면 텍스트 (OCR)
+327bea24	화면의 영어 텍스트 번역
+0ad0f496	화면이 바뀔 때만 (빠름)
+a1c6f6f6	모든 샘플
+12b8f364	샘플 간격
+66bea3b2	변화 민감도
+84522f61	최소 신뢰도
+ca3d4b73	다음보다 짧게 보이는 텍스트 무시
+acc570d0	최소 글자 크기
+ffa019e3	설정 → 번역에서 4–14B 범용 모델을 고르거나 ('목록' 클릭) 내장 오프라인 AI 두뇌를 쓰세요.
+45086469	작은 줄(화면 녹화 속 메뉴, 버튼, 라벨)은 제외합니다. 0이면 모두 유지합니다.
+9841b69a	레이아웃 모드
+db61155b	엔진
+be1d82a5	내장
+d84f3165	Tesseract
+a945985f	상자 불투명도
+126befb6	자동
+0c940e46	자동 감지
+0fc0d8e9	3 · 자동 페이지 레이아웃
+7fb0f48a	6 · 하나의 텍스트 블록
+3c8b4723	11 · 흩어진 텍스트 (동영상)
+c44a2f35	12 · 흩어진 텍스트 + OSD
+2057306e	사용자 지정
+724ccc6a	음성 (Whisper)
+527a1b52	영어 음성 받아쓰기와 더빙
+53dd6ba6	내장 Whisper는 --features whisper로 빌드해야 합니다 (README 참고).
+19dc307e	기본값
+4e02cbb1	가능하면 GPU 사용
+38297885	CPU 스레드 (0 = 자동)
+943bd539	tiny.en · 75 MB · 가장 빠름
+a72fe0d0	base.en · 142 MB · 추천
+d4e9b0d4	small.en · 466 MB · 더 좋음
+f6ebc93e	medium.en · 1.5 GB · 가장 좋음 (느림)
+b645becd	large-v3-turbo · 1.6 GB · GPU
+05f6f560	일본어 음성 (TTS)
+00ec4476	VOICEVOX (로컬 HTTP)
+b2512860	OpenAI 호환 / Kokoro
+ccc764b6	edge-tts (온라인)
+511c9bd5	Piper (로컬 CLI)
+242750f2	엔진 URL
+38460e3b	화자 ID
+d8d2cfac	무료, 오프라인, 고품질. 먼저 VOICEVOX 앱을 실행하세요.
+27d1a499	음성
+4d2cfde6	예: 로컬 Kokoro-FastAPI (음성 jf_alpha) 또는 OpenAI (tts-1).
+011e7010	인터넷이 필요합니다 (`pip install edge-tts`). ja-JP-NanamiNeural / ja-JP-KeitaNeural.
+e6334598	음성 모델
+852c5410	선택한 모델 없음
+f9cb6003	도구 및 출력
+ffe78236	품질 (CRF)
+ae0ad188	인코더 속도
+c216d626	임시 파일 유지 (디버깅용)
+030b947c	설정 파일:
+4814e1f4	BabelCraft 오프라인 AI 두뇌 (내장)
+16635ed8	llama.cpp 서버
+a2986a6b	OpenRouter (수백 개 모델)
+adc85c3d	기타 OpenAI 호환 서버
+cbd2d62c	번역
+8b60ec45	번역 · 음성 인식 · 음성
+43a23a38	번역 · 음성 인식
+30f05723	Groq (매우 빠른 Whisper)
+aebf9e69	이 컴퓨터의 Whisper 서버 (Speaches…)
+5bd0f1c4	Kokoro-FastAPI (이 컴퓨터)
+650403a8	OpenAI 음성 (온라인)
+28da3881	여러 오픈 AI 모델을 컴퓨터에서 실행합니다 (번역).
+dcf43fb3	AI 모델을 내려받아 실행하는 데스크톱 앱 (번역).
+6a618244	서버가 내장된 무료 오프라인 ChatGPT 스타일 앱 (번역).
+576e209d	캐릭터가 많은 무료 일본어 음성 앱 (음성).
+839c5457	일본어 음성을 갖춘 작은 로컬 음성 서버 (음성).
+7ad23e14	빠른 오프라인 음성 프로그램; 일본어 음성 모델이 필요합니다 (음성).
+a6b89890	Microsoft의 온라인 신경망 음성, 키 불필요 (음성).
+ede4f24c	직접 운영할 수 있는 무료 번역 서버 (번역).
+c959a878	내 컴퓨터용 Whisper 음성 인식 서버 (음성).
+2bc11867	화면 텍스트를 읽는 다른 인식기 (OCR).
+8c5703ff	Qwen 2.5 · 1.5B (작고 빠름)
+bafe9c62	Qwen 3 · 4B (추천)
+8b8b111a	Gemma 3 · 4B (대안)
+73187fe5	Qwen 2.5 · 7B (최고 품질)
+fad2714f	오래된 컴퓨터나 메모리 4 GB용. 더 단순한 일본어.
+6839dc74	자연스럽고 좋은 일본어; 메모리 8 GB인 대부분의 컴퓨터에서 작동합니다.
+7af7e30c	Google의 오픈 모델; Qwen과 비교해 볼 만한 다른 일본어 스타일.
+9e1e444a	가장 좋은 번역; 메모리 16 GB나 그래픽 카드가 필요합니다.
+bbc9da8e	오프라인 AI 두뇌
+b334b4ca	번역 담당
+a36951fd	이 컴퓨터에서 — 무료, 비공개, 오프라인
+55749e52	온라인 서비스 — 계정과 API 키 필요
+0b610402	AI 모델
+00934d1a	그래픽 카드 사용 (더 빠름; Vulkan)
+99d1bac3	다운로드됨 — 오프라인 번역 준비 완료
+aa33a0de	처음 사용할 때 자동으로 내려받습니다
+e788bf35	지금 다운로드
+d6d15ddf	내 컴퓨터에서 실행: 아무것도 인터넷으로 보내지 않으며 계정이나 키가 필요 없습니다.
+ab0b938b	모든 모델과 다운로드…
+682437f6	먼저 앱의 로컬 서버를 시작한 다음 '목록'을 눌러 불러온 모델을 고르세요.
+2fe90724	'목록'을 눌러 계정에서 쓸 수 있는 모델을 확인하세요.
+d276bf6c	claude-opus-5-5가 가장 뛰어나고, claude-sonnet-5-5와 claude-haiku-5-5는 더 저렴합니다.
+f7b16852	직접 운영하는 LibreTranslate 서버 (키 불필요) 또는 키가 있는 호스팅 서버.
+03a9735a	앱 받기 ↗
+8aa63bd0	API 키 받기 ↗
+63772c47	테스트 중… (AI 두뇌 시작 중)
+8d2937a1	목록
+ef7e1cf8	서비스에 어떤 모델이 있는지 묻기
+0b957a7e	서비스에 묻는 중…
+77aa80e6	모델 선택
+a42cc3de	온라인 / 서버 API
+113e7299	동영상 소리를 이 서비스에 올려 받아쓰기합니다. OpenAI와 Groq는 API 키가 필요합니다.
+79f47a0a	서버 받기 ↗
+8be167fe	VOICEVOX (무료, 오프라인)
+2d20e7a9	OpenAI 음성 / Kokoro (API)
+74dc9b9b	컴퓨터 내장 일본어 음성
+38181613	필요할 때 VOICEVOX 자동 시작
+a8149a8d	무료, 오프라인, 고품질. BabelCraft가 처음에 VOICEVOX 엔진(1.9 GB)을 내려받습니다. 공개할 때는 음성 출처를 밝혀 주세요 (예: "VOICEVOX:ずんだもん").
+566ec4bc	VOICEVOX 웹사이트와 이용 약관 ↗
+6dc9db9c	예: 로컬 Kokoro-FastAPI (음성 jf_alpha) 또는 OpenAI (gpt-4o-mini-tts / tts-1, 음성 alloy, nova…).
+34db4ba0	음성 이름
+238d14f9	Windows나 macOS에 내장된 일본어 음성을 씁니다. 이름을 비워 두면 처음 찾은 음성을 씁니다.
+e9431edf	찾음:
+2d7709f3	Zundamon · 보통
+5d8c1d94	Zundamon · 달콤
+99ad8c08	Shikoku Metan · 보통
+831f9805	Shikoku Metan · 달콤
+b431b666	Kasukabe Tsumugi
+ed1e4728	Namine Ritsu
+7a204a92	Amehare Hau
+70641198	Kurono Takehiro
+01006773	Shirakami Kotarou
+40603730	Aoyama Ryusei
+53f6ec6d	Meimei Himari
+308e1da9	Kyushu Sora
+a05669b6	오프라인 AI 두뇌 사용
+b917e82d	설정 → 음성 인식에 서비스의 API 키를 붙여 넣거나 ('AI 모델과 다운로드' 페이지에서도 가능), whisper-cli(무료, 오프라인)로 되돌리세요.
+a042c25b	BabelCraft가 무료 VOICEVOX 엔진을 알아서 내려받습니다 ('자동 설치'를 누르거나 그냥 작업을 시작하세요). 동영상을 공개할 때는 음성 출처를 밝혀 주세요. 예: "VOICEVOX:ずんだもん".
+8584f7c1	Windows: 설정 → 시간 및 언어 → 음성 → 음성 추가 → 일본어. Mac: 시스템 설정 → 손쉬운 사용 → 읽기 및 말하기 → 시스템 음성 → 음성 관리 → 일본어. 또는 VOICEVOX를 고르세요 (무료, 자동 다운로드).
+5f77ac51	설정 → 일본어 음성에서 VOICEVOX를 고르거나 (무료, 자동 다운로드) 선택한 음성 앱 / 서버를 시작하세요.
+ba141bed	Ollama나 LM Studio를 설치하거나 ('AI 모델과 다운로드' 참고) 설정 → 번역에서 온라인 서비스를 쓰세요.
+04045eb9	설정 → 번역에 Anthropic API 키를 붙여 넣거나 무료 오프라인 AI 두뇌를 쓰세요.
+cd6aeedd	LibreTranslate 서버를 시작하거나 무료 오프라인 AI 두뇌를 쓰세요.
+1399ecab	Ollama(ollama.com)를 설치하고 `ollama pull qwen2.5:7b`를 실행하거나 — 버튼을 눌러 BabelCraft 자체 오프라인 AI 두뇌를 쓰세요 (설치 불필요).
+29e7a63c	앱을 열고 로컬 서버를 시작하세요 (LM Studio: Developer → Start server; Jan: Settings → Local API Server) — 또는 내장 오프라인 AI 두뇌를 쓰세요.
+8c7fc587	설정 → 번역에 API 키를 붙여 넣거나 ('AI 모델과 다운로드' 페이지에서도 가능) 무료 오프라인 AI 두뇌를 쓰세요.
+cc44fa0d	▶  동영상 번역
+8a97d217	⬇  AI 모델과 다운로드
+04058df0	AI 모델과 다운로드
+0815aad4	새로 고침
+46ec8da6	BabelCraft가 쓰는 모든 것, 출처, 그리고 이 컴퓨터에 이미 있는 것. 다운로드는 BabelCraft 전용 폴더에 저장되며 시스템에는 아무것도 설치하지 않습니다.
+8d304745	폴더:
+ecbbac42	모든 동영상에 필요 (자동 다운로드)
+660ec0f4	준비됨
+eb5c7115	아직 다운로드 안 됨
+7804ddd3	웹사이트 ↗
+a31e273b	동영상을 읽고 완성된 일본어 버전을 씁니다.
+314d7fdc	텍스트 인식 모델 (OCR)
+6f056690	화면에 보이는 영어 텍스트를 찾아 읽습니다.
+e7bb35f1	일본어 글꼴 (Noto Sans JP)
+79f59e25	일본어 텍스트를 동영상 위에 그려 □□□로 보이지 않게 합니다.
+a1cfe1c4	온라인 API나 Whisper 내장 버전을 쓰세요
+5044f7bd	Whisper 음성 도구 (whisper.cpp)
+69c313d8	영어 음성을 시간 정보가 있는 텍스트로 바꿉니다.
+54dbde20	Whisper 음성 모델
+970b4034	큰 모델일수록 더 정확하게 듣지만 시간이 더 걸립니다.
+6d3ffa7c	오프라인 AI 두뇌 — 내 컴퓨터에서 번역
+28bc3f50	계정도 API 키도 필요 없고, 아무것도 컴퓨터 밖으로 나가지 않습니다. BabelCraft가 llama.cpp 엔진과 고른 모델을 내려받아 번역하는 동안에만 숨겨서 실행하고 끝나면 닫습니다.
+f9328dff	이 컴퓨터에서는 쓸 수 없음
+7794b21a	AI 두뇌 엔진 (llama.cpp)
+6de93ce5	AI 모델을 실행하는 프로그램입니다.
+016066fd	사용 중
+2d6293d0	다운로드됨
+a48e99aa	라이선스:
+0ef2e7dc	모델 페이지 ↗
+21a5901d	삭제
+dbb8a7a8	번역에 사용
+e4089c1b	또는 무료 Ollama 앱 사용
+6d4b71f5	아직 모델이 없습니다 — 아래에서 하나 내려받으세요.
+147eb74c	실행 중
+1471d28b	개 모델
+529618e6	Ollama로 번역
+632b93f7	Ollama에 모델 다운로드:
+e6bfba38	모델 라이브러리 ↗
+fe001abd	실행 안 됨
+89b641a3	여러 오픈 AI 모델을 실행하는 무료 앱입니다. 설치하면 BabelCraft가 이를 사용하고 모델을 내려받을 수 있습니다.
+1b155e86	Ollama 받기 ↗
+af47f3df	실행 중 ·
+186fb844	다운로드됨 · 자동 시작
+e5920759	VOICEVOX 앱 찾음 · 자동 시작
+65a00c42	VOICEVOX 음성 엔진
+0d966565	무료, 오프라인, 자연스러운 일본어 음성. 공개할 때는 음성 출처를 밝혀 주세요. 예: "VOICEVOX:ずんだもん".
+0cad0cf1	이용 약관 ↗
+266842d1	설치된 일본어 음성 없음
+fd23b2f4	Linux에서는 쓸 수 없음
+ee7e05b6	Windows와 macOS는 음성 설정에서 일본어 음성을 무료로 추가할 수 있습니다.
+b65323cd	음성 설정 ↗
+d2f20db6	BabelCraft와 함께 쓸 수 있는 다른 무료 앱
+c0c6cd33	온라인 AI 서비스 — API 키 붙여 넣기
+99c6fd5e	키는 이 컴퓨터의 BabelCraft 설정 파일에만 저장됩니다. 온라인 서비스는 사용량만큼 요금이 듭니다; 설정 → 번역 또는 음성 인식에서 고르세요.
+74c866bf	키 저장됨
+327e1475	환경 변수의 키
+1265c286	키 받기 ↗
+b2c9aee7	API 키 붙여 넣기
+e6a52873	한 번만 필요합니다. 취소해도 내려받은 부분은 남아 있고 다음에 이어서 받습니다.
+16705937	지금까지 내려받은 부분은 남아 있습니다: 다음에 멈춘 곳부터 이어서 받습니다.
+ad7e2c40	잠시만 기다리세요…
+9d34077c	BabelCraft 정보
+62f7c629	자유 소프트웨어: GNU 일반 공중 사용 허가서 버전 3 또는 (선택에 따라) 그 이후 버전에 따라 공유하고 수정할 수 있습니다. 어떠한 보증도 없습니다.
+c571731a	라이선스 (GNU GPL v3) ↗
+ae71d394	소스 코드 ↗
+62d26c08	남은 시간 (다운로드)
+fe6c570e	FFmpeg 압축 푸는 중
+7c3e591d	텍스트 감지 모델
+90f96e59	텍스트 인식 모델
+f1805489	Whisper 도구 (whisper.cpp)
+02807710	whisper.cpp 압축 푸는 중
+0f155e49	AI 두뇌 엔진 찾는 중 (llama.cpp)
+f77b5742	AI 두뇌 엔진 압축 푸는 중
+cfddb4cd	최신 VOICEVOX 엔진 찾는 중
+544c71a5	VOICEVOX 분할 파일 합치는 중
+7efd1c39	VOICEVOX 압축 푸는 중 (약 1분)
+feb4db1b	처음 한 번 설정 · 다운로드 {0}/{1}…
+3131ba31	{0} / {1}
+57b7e123	{0}/초
+26cdd5ba	지난번에 이어서
+53d004e2	{0} 남음
+1cdbb8d4	AI 두뇌 모델 {0}
+961c54b6	Whisper 모델 {0}
+96a241fc	VOICEVOX 음성 엔진 ({0}/{1} 부분)
+3b59fa88	BabelCraft 버튼과 메뉴의 언어
+3eb0dc0a	언어 검색…
+335bbe86	바로 사용 가능
+3f21323f	더 많은 언어 — 처음 고를 때 BabelCraft의 AI가 버튼과 메뉴를 번역합니다
+29060690	BabelCraft를 {0}(으)로 번역하는 중…
+fcb70d79	설정 → 번역에서 고른 번역기를 씁니다. 오프라인 AI 두뇌는 처음에 약 2.5 GB를 내려받습니다.
+280bb407	오른쪽에서 왼쪽으로 쓰는 글자는 일부에서 순서가 잘못 보일 수 있습니다.
+99e87037	동영상 번역이 끝날 때까지 기다려 주세요.
+e7e8b162	버튼과 메뉴를 번역하지 못했습니다
+e3602340	{0}용 글꼴 다운로드 중…
+2d107cdd	일치하는 언어가 없습니다.
+917d4a36	AI 번역
+be692ced	다시 번역
+e1fdb80e	현재 다운로드가 끝날 때까지 기다려 주세요.

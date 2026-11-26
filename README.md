@@ -7,7 +7,7 @@
 Translates a video's on-screen English text <i>and</i> spoken English into Japanese, then renders a finished, dubbed video file — silently, in the background.</p>
 
 <p align="center">Windows 10/11 (x64 · x86 · ARM64) · Linux (x86_64 · aarch64, any distro) · macOS 11+ (Apple Silicon + Intel)<br>
-Interface in English or 日本語 · works fully offline, or with the online AI service of your choice</p>
+Interface in 115 languages (English by default) · works fully offline, or with the online AI service of your choice</p>
 
 ---
 
@@ -41,7 +41,16 @@ The app never plays audio or shows a preview, so you can minimise it and keep wo
    With the offline AI brain and VOICEVOX this first download is almost 5 GB, so the first job can spend a while on *One-time setup*: the progress screen shows each download's size, speed and time left. If you cancel or close the app, what has downloaded is kept and the next job carries on from there.
 3. Pick an English video (or drop it on the window), check the output name, press **Start translating**.
 
-Switch the interface between **English** and **日本語** with the buttons at the top right.
+## Interface language
+
+BabelCraft starts in **English**. To change the language of its buttons and menus, press the **speaking-mouth button** (a mouth with sound waves) at the top right and pick a language — each is listed in its own writing, and the search box finds it by its own or its English name.
+
+- **Built in, translated by hand:** English, 日本語, Español, Français, Deutsch, Português, Italiano, Русский, 简体中文, 한국어 — they switch at once.
+- **Every other language** (115 in all, from Afrikaans to Zulu): the first time you choose one, BabelCraft's AI translates the buttons and menus with the translator chosen in *Settings → Translation* (the built-in offline AI brain unless you picked another; it downloads about 2.5 GB the first time). This takes a few minutes, shows its progress in the menu, and is saved — after that the switch is instant. Right-click such a language and choose **Translate again** to redo it, or delete `i18n/<code>.txt` in BabelCraft's data folder.
+- **Fonts:** BabelCraft uses the computer's own font for the language's writing (Chinese, Korean, Hindi, Arabic, Thai, Amharic…). When a computer has none, a free Noto font is downloaded into BabelCraft's own folder.
+- Right-to-left languages (Arabic, Hebrew, Persian, Urdu…) show their words correctly joined, but a line that mixes them with English names may appear in a different order.
+- The video itself is still translated from English into Japanese; the interface language only changes BabelCraft's own text.
+- Translators: the texts are in `assets/i18n/` — `en.txt` lists every English text with its id, and `<code>.txt` holds a language's translations as `<id><TAB><text>` lines.
 
 ## Everything it uses — and where it comes from
 
@@ -195,7 +204,7 @@ bash packaging/macos/make-app.sh --features whisper,metal  # with GPU Whisper (b
 ### Command line
 ```
 babelcraft                          open the app
-babelcraft --lang ja                open with the Japanese interface (en = English)
+babelcraft --lang es                open with the interface in another language (a code like ja, fr, zh-Hans, ko, or a name)
 babelcraft --page downloads         open on the AI models & downloads page
 babelcraft --screenshot out.png     open without taking focus, render ~120 frames, save a PNG of the window, exit
 babelcraft --version
@@ -206,11 +215,11 @@ babelcraft --version
 1. Put these files in your repository folder (e.g. a clone of `https://github.com/Arrestis/Babel`), then:
    ```bash
    git add .
-   git commit -m "BabelCraft 1.1.2"
+   git commit -m "BabelCraft 1.2.0"
    git push
    ```
 2. **Actions** builds every platform on each push (`.github/workflows/release.yml`).
-3. To publish downloads: `git tag v1.1.2 && git push origin v1.1.2` → a Release is created with:
+3. To publish downloads: `git tag v1.2.0 && git push origin v1.2.0` → a Release is created with:
    Windows x64 / x86 / ARM64 / x64-whisper `.msi` installers and `.zip` files, Linux x86_64 / aarch64 `.tar.gz` + `.deb` + `.AppImage` (+ x86_64-whisper), macOS universal `.dmg` (+ `-metal`).
 
 ## Project layout
@@ -219,15 +228,19 @@ babelcraft --version
 Cargo.toml              crate `babelcraft` (Rust 2024), features: whisper, vulkan, cuda, metal
 build.rs                embeds the Windows icon/version info
 assets/                 icon (source picture, 256/1024 PNG, .ico)
+assets/i18n/            interface text: en.txt (every English text + id) and the hand-made translations
 examples/make_icons.rs  regenerates the icons from assets/icon-source.png
 src/main.rs             window setup, icon, command line, --screenshot
-src/ui.rs               egui interface: splash, files, settings, progress, setup checks, AI models & downloads page, log
-src/i18n.rs             English / 日本語 interface text
+src/ui.rs               egui interface: splash, files, settings, progress, setup checks, AI models & downloads page,
+                        log, the speaking-mouth language button and menu
+src/i18n.rs             interface language: tr(), built-in and AI-made translations
+src/langs.rs            the 115 interface languages (own name, English name, writing system)
+src/interface.rs        puts the interface into any language (font download + AI translation)
 src/pipeline.rs         background job orchestration, progress, cancel, cleanup, SRT
 src/video.rs            FFprobe/FFmpeg: probe, audio extraction, frame streaming, final render
 src/ocr.rs              built-in OCR + Tesseract, change detection, interval de-duplication
 src/overlay.rs          Japanese text boxes (auto-fit, wrapping rules, never clipped) + overlay stream
-src/fonts.rs            cross-platform Japanese font detection
+src/fonts.rs            cross-platform font detection (Japanese, and every writing system) + Noto downloads
 src/asr.rs              Whisper (whisper-rs, whisper-cli, or an online Whisper API)
 src/translate.rs        offline AI brain / Ollama / OpenAI-compatible / Claude / DeepL / LibreTranslate, batching + cache
 src/ai.rs               catalogue of local and online AI services, model lists, Ollama downloads
