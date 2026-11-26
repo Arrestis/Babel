@@ -165,13 +165,12 @@ pub fn whisper_cli_installable() -> bool {
 /// Progress reporting for installers: (what, fraction 0..1 or <0 when unknown).
 pub type Progress<'a> = &'a mut dyn FnMut(&str, f32);
 
+/// Downloads one file. The label stays `what`; sizes, speed and time left are available to the
+/// progress callback through `util::current_download()`.
 pub fn fetch(url: &str, dest: &Path, what: &str, cancel: &CancelToken, progress: Progress) -> Result<()> {
     progress(what, 0.0);
-    download(url, dest, cancel, |f, bytes| {
-        let label = format!("{what} ({:.0} MB)", bytes as f64 / 1_048_576.0);
-        progress(&label, if f > 0.0 { f } else { -1.0 });
-    })
-    .with_context(|| format!("could not download {what}"))
+    download(url, dest, cancel, |f, _bytes| progress(what, if f > 0.0 { f } else { -1.0 }))
+        .with_context(|| format!("could not download {what}"))
 }
 
 pub fn install_ffmpeg(cancel: &CancelToken, progress: Progress) -> Result<()> {

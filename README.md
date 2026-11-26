@@ -36,6 +36,7 @@ The app never plays audio or shows a preview, so you can minimise it and keep wo
    - macOS: `BabelCraft-x.y.z-macos-universal.dmg` → drag to Applications → first launch: right-click → **Open**
    - `-whisper` / `-metal` variants have Whisper built in (`metal` = GPU on Apple Silicon).
 2. Start BabelCraft. Press **Set up automatically** in *Setup checks* — or just start a job: everything missing is downloaded into BabelCraft's own folder on first use (nothing is installed into your system).
+   With the offline AI brain and VOICEVOX this first download is almost 5 GB, so the first job can spend a while on *One-time setup*: the progress screen shows each download's size, speed and time left. If you cancel or close the app, what has downloaded is kept and the next job carries on from there.
 3. Pick an English video (or drop it on the window), check the output name, press **Start translating**.
 
 Switch the interface between **English** and **日本語** with the buttons at the top right.
@@ -196,11 +197,11 @@ babelcraft --version
 1. Put these files in your repository folder (e.g. a clone of `https://github.com/Arrestis/Babel`), then:
    ```bash
    git add .
-   git commit -m "BabelCraft 1.1.1"
+   git commit -m "BabelCraft 1.1.2"
    git push
    ```
 2. **Actions** builds every platform on each push (`.github/workflows/release.yml`).
-3. To publish downloads: `git tag v1.1.1 && git push origin v1.1.1` → a Release is created with:
+3. To publish downloads: `git tag v1.1.2 && git push origin v1.1.2` → a Release is created with:
    Windows x64 / x86 / ARM64 / x64-whisper `.zip`, Linux x86_64 / aarch64 `.tar.gz` + `.deb` + `.AppImage` (+ x86_64-whisper), macOS universal `.dmg` (+ `-metal`).
 
 ## Project layout

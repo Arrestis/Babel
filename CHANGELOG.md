@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.2
+
+### Improved
+- **First-time downloads no longer look stuck.** While a job downloads what it needs (almost 5 GB with the offline AI brain and VOICEVOX), the progress screen shows *One-time setup · download 2 of 3*, the file being fetched, how much has arrived, the speed and the time left, instead of an *Extracting Media* bar that barely moved. The taskbar title shows the download percentage too.
+- The time left for the translation itself no longer counts the download time.
+- If you cancel during a download, the log says that what has downloaded is kept; the next job says it is *carrying on from* that point. This now also works for the VOICEVOX engine, which used to start its download again from the beginning.
+- The **AI models & downloads** page shows size, speed and time left for its downloads as well.
+
 ## 1.1.1
 
 ### Fixed

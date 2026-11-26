@@ -435,8 +435,83 @@ fn ja(en: &str) -> Option<&'static str> {
         "key from environment" => "環境変数のキー",
         "Get a key ↗" => "キーを入手 ↗",
         "paste API key" => "API キーを貼り付け",
+
+        // First-use downloads on the progress screen
+        "Only needed once. If you cancel, what has downloaded is kept and carries on next time." => {
+            "最初の 1 回だけ必要です。キャンセルしても、ダウンロード済みの分は残り、次回その続きから再開します。"
+        }
+        "What has downloaded so far is kept: next time it carries on where it stopped." => {
+            "ここまでにダウンロードした分は残してあります。次回はその続きから再開します。"
+        }
+        "Please wait…" => "お待ちください…",
+        "Time left (download)" => "残り時間（ダウンロード）",
+        // Installer steps
+        "Unpacking FFmpeg" => "FFmpeg を展開中",
+        "Text-detection model" => "文字検出モデル",
+        "Text-recognition model" => "文字認識モデル",
+        "Whisper tool (whisper.cpp)" => "Whisper ツール (whisper.cpp)",
+        "Unpacking whisper.cpp" => "whisper.cpp を展開中",
+        "Looking up the AI brain engine (llama.cpp)" => "AI エンジン (llama.cpp) を確認中",
+        "Unpacking the AI brain engine" => "AI エンジンを展開中",
+        "Looking up the newest VOICEVOX engine" => "最新の VOICEVOX エンジンを確認中",
+        "Joining the VOICEVOX parts" => "VOICEVOX の分割ファイルを結合中",
+        "Unpacking VOICEVOX (about a minute)" => "VOICEVOX を展開中（1 分ほど）",
         _ => return None,
     })
+}
+
+/// Installer step names ("AI brain model Qwen 3 · 4B", "Unpacking FFmpeg", …) in the chosen language.
+pub fn tr_step(en: &str) -> String {
+    if !is_japanese() {
+        return en.to_string();
+    }
+    if let Some(t) = ja(en) {
+        return t.to_string();
+    }
+    if let Some(name) = en.strip_prefix("AI brain model ") {
+        return format!("AI モデル {name}");
+    }
+    if let Some(file) = en.strip_prefix("Whisper model ") {
+        return format!("Whisper モデル {file}");
+    }
+    // "VOICEVOX voice engine (part 1 of 3)"
+    if let Some((a, b)) = en.strip_prefix("VOICEVOX voice engine (part ").and_then(|r| r.trim_end_matches(')').split_once(" of ")) {
+        return format!("VOICEVOX 音声エンジン（{a} / {b}）");
+    }
+    en.to_string()
+}
+
+/// "One-time setup · download 2 of 3…"
+pub fn setup_headline(index: usize, count: usize) -> String {
+    if is_japanese() {
+        format!("初回セットアップ：ダウンロード（{index} / {count}）…")
+    } else {
+        format!("One-time setup · download {index} of {count}…")
+    }
+}
+
+/// "1.3 GB of 2.5 GB · 2.7 MB/s" (plus a note when it carries on from an earlier try).
+pub fn download_numbers(d: &crate::util::DownloadStats) -> String {
+    use crate::util::fmt_bytes;
+    let ja = is_japanese();
+    let mut s = match d.total {
+        Some(t) if ja => format!("{} / {}", fmt_bytes(d.done), fmt_bytes(t)),
+        Some(t) => format!("{} of {}", fmt_bytes(d.done), fmt_bytes(t)),
+        None => fmt_bytes(d.done),
+    };
+    if d.per_sec > 0.0 {
+        let speed = if d.per_sec >= 1e6 { format!("{:.1} MB", d.per_sec / 1e6) } else { format!("{:.0} KB", (d.per_sec / 1e3).max(1.0)) };
+        s.push_str(&if ja { format!(" ・ {speed}/秒") } else { format!(" · {speed}/s") });
+    }
+    if d.resumed_from > 0 {
+        s.push_str(if ja { " ・ 前回の続きから" } else { " · carrying on from last time" });
+    }
+    s
+}
+
+/// " · 07:12 left"
+pub fn time_left(t: &str) -> String {
+    if is_japanese() { format!(" ・ 残り {t}") } else { format!(" · {t} left") }
 }
 
 #[cfg(test)]
@@ -449,5 +524,30 @@ mod tests {
         assert_eq!(tr("not in the table"), "not in the table");
         set_japanese(false);
         assert_eq!(tr("Settings"), "Settings");
+        // In the same test: the language switch is shared by the whole program.
+        download_lines_read_well();
+    }
+
+    fn download_lines_read_well() {
+        use crate::util::DownloadStats;
+        let d = DownloadStats { done: 1_325_158_635, total: Some(2_497_281_120), per_sec: 2_700_000.0, resumed_from: 0 };
+        set_japanese(false);
+        assert_eq!(download_numbers(&d), "1.3 GB of 2.5 GB · 2.7 MB/s");
+        assert_eq!(setup_headline(2, 3), "One-time setup · download 2 of 3…");
+        assert_eq!(tr_step("AI brain model Qwen 3 · 4B"), "AI brain model Qwen 3 · 4B");
+        // 1.17 GB left at 2.7 MB/s is about 7 minutes.
+        let eta = d.eta_secs().unwrap();
+        assert!((430.0..440.0).contains(&eta), "{eta}");
+        let resumed = DownloadStats { resumed_from: 1_000_000_000, per_sec: 0.0, ..d };
+        assert_eq!(download_numbers(&resumed), "1.3 GB of 2.5 GB · carrying on from last time");
+        let small = DownloadStats { done: 526_000, total: Some(2_499_479), per_sec: 0.0, resumed_from: 0 };
+        assert_eq!(download_numbers(&small), "526 KB of 2.5 MB");
+        assert_eq!(crate::util::fmt_bytes(147_964_211), "148 MB");
+        set_japanese(true);
+        assert_eq!(download_numbers(&d), "1.3 GB / 2.5 GB ・ 2.7 MB/秒");
+        assert_eq!(tr_step("AI brain model Qwen 3 · 4B"), "AI モデル Qwen 3 · 4B");
+        assert_eq!(tr_step("VOICEVOX voice engine (part 2 of 3)"), "VOICEVOX 音声エンジン（2 / 3）");
+        assert_eq!(tr_step("Unpacking FFmpeg"), "FFmpeg を展開中");
+        set_japanese(false);
     }
 }

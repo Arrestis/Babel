@@ -1,6 +1,6 @@
 ﻿[package]
 name = "babelcraft"
-version = "1.1.1"
+version = "1.1.2"
 edition = "2024"
 description = "Translate English videos (on-screen text + speech) into Japanese and render a finished dubbed video."
 license = "MIT"

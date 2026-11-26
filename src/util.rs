@@ -108,9 +108,84 @@ pub enum Msg {
     StageProgress(f32),
     StageDone(Stage),
     Log(LogLevel, String),
+    /// First-use downloads before the real work starts (`None` once they are done).
+    Setup(Option<SetupInfo>),
     Finished(std::path::PathBuf),
     Failed(String),
     Cancelled,
+}
+
+/// What the one-time setup is fetching right now, for the progress screen.
+#[derive(Clone, Debug)]
+pub struct SetupInfo {
+    /// Which download this is (1-based) and how many there are.
+    pub index: usize,
+    pub count: usize,
+    /// What is being set up, e.g. "AI brain model Qwen 3 · 4B" or "Unpacking FFmpeg".
+    pub what: String,
+    /// Share of this item done (0..1), when known.
+    pub frac: Option<f32>,
+    /// Size, speed and time left while a file is downloading.
+    pub download: Option<DownloadStats>,
+}
+
+/// Live numbers for a file being downloaded.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct DownloadStats {
+    /// Bytes on disk so far (including any kept from an earlier, interrupted try).
+    pub done: u64,
+    pub total: Option<u64>,
+    /// Average speed of this try in bytes per second (0 until it can be measured).
+    pub per_sec: f64,
+    /// Bytes kept from an earlier try that this download carries on from.
+    pub resumed_from: u64,
+}
+
+impl DownloadStats {
+    pub fn frac(&self) -> Option<f32> {
+        self.total.filter(|t| *t > 0).map(|t| (self.done as f64 / t as f64).clamp(0.0, 1.0) as f32)
+    }
+    /// Seconds left at the current speed.
+    pub fn eta_secs(&self) -> Option<f64> {
+        let total = self.total?;
+        (self.per_sec > 0.0).then(|| total.saturating_sub(self.done) as f64 / self.per_sec)
+    }
+}
+
+thread_local! {
+    static CURRENT_DOWNLOAD: std::cell::Cell<Option<DownloadStats>> = const { std::cell::Cell::new(None) };
+}
+
+/// Size, speed and time left of the download running on this thread. Progress callbacks are
+/// called on the downloading thread, so they can read it to show more than a percentage.
+pub fn current_download() -> Option<DownloadStats> {
+    CURRENT_DOWNLOAD.with(|c| c.get())
+}
+
+fn set_current_download(s: Option<DownloadStats>) {
+    CURRENT_DOWNLOAD.with(|c| c.set(s));
+}
+
+/// Clears this thread's download numbers however the download ends.
+struct DownloadStatsGuard;
+impl Drop for DownloadStatsGuard {
+    fn drop(&mut self) {
+        set_current_download(None);
+    }
+}
+
+/// Sizes as download pages write them (1 GB = 1000 MB): "850 KB", "2.5 MB", "142 MB", "2.5 GB".
+pub fn fmt_bytes(b: u64) -> String {
+    let b = b as f64;
+    if b >= 1e9 {
+        format!("{:.1} GB", b / 1e9)
+    } else if b >= 1e7 {
+        format!("{:.0} MB", b / 1e6)
+    } else if b >= 1e6 {
+        format!("{:.1} MB", b / 1e6)
+    } else {
+        format!("{:.0} KB", (b / 1e3).max(1.0))
+    }
 }
 
 #[derive(Clone)]
@@ -345,6 +420,7 @@ pub fn read_body_string(resp: &mut ureq::http::Response<ureq::Body>) -> Result<S
 /// An interrupted download (closed app, lost connection) carries on where it stopped, and a
 /// dropped connection is retried a few times before giving up.
 pub fn download(url: &str, dest: &Path, cancel: &CancelToken, mut progress: impl FnMut(f32, u64)) -> Result<()> {
+    let _clear_stats = DownloadStatsGuard;
     if let Some(dir) = dest.parent() {
         std::fs::create_dir_all(dir)?;
     }
@@ -424,6 +500,12 @@ fn download_once(url: &str, part: &Path, cancel: &CancelToken, progress: &mut im
     } else {
         std::fs::File::create(part)?
     };
+    let started = Instant::now();
+    let start_bytes = done;
+    let resumed_from = if resumed { have } else { 0 };
+    let frac_of = |done: u64| total.map(|t| done as f32 / t.max(1) as f32).unwrap_or(0.0);
+    set_current_download(Some(DownloadStats { done, total, per_sec: 0.0, resumed_from }));
+    progress(frac_of(done), done);
     let mut buf = vec![0u8; 256 * 1024];
     loop {
         if cancel.is_cancelled() {
@@ -437,7 +519,10 @@ fn download_once(url: &str, part: &Path, cancel: &CancelToken, progress: &mut im
         }
         file.write_all(&buf[..n])?;
         done += n as u64;
-        progress(total.map(|t| done as f32 / t.max(1) as f32).unwrap_or(0.0), done);
+        let secs = started.elapsed().as_secs_f64();
+        let per_sec = if secs >= 1.0 { (done - start_bytes) as f64 / secs } else { 0.0 };
+        set_current_download(Some(DownloadStats { done, total, per_sec, resumed_from }));
+        progress(frac_of(done), done);
     }
     file.flush()?;
     if let Some(t) = total {

@@ -8,7 +8,7 @@ use crate::tools::{self, Progress};
 use crate::util::{CancelToken, Cancelled, http_agent, read_body_string};
 use anyhow::{Context, Result, bail};
 use std::io::{Read, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 pub const SERVICE: &str = "VOICEVOX engine";
@@ -98,8 +98,25 @@ pub fn install(cancel: &CancelToken, progress: Progress) -> Result<()> {
         bail!("VOICEVOX engine download not found");
     }
     let tmp = tools::tools_dir().join("_download_voicevox");
-    let _ = std::fs::remove_dir_all(&tmp);
     std::fs::create_dir_all(&tmp)?;
+    // Keep what an earlier, cancelled try already downloaded of these same files (so it carries
+    // on from there); clear out anything else, such as parts of an older version.
+    let keep: Vec<String> = parts
+        .iter()
+        .flat_map(|(name, _)| {
+            let part = Path::new(name).with_extension("part").display().to_string();
+            [name.clone(), format!("{part}.size"), part]
+        })
+        .collect();
+    if let Ok(entries) = std::fs::read_dir(&tmp) {
+        for e in entries.flatten() {
+            let name = e.file_name().to_string_lossy().to_string();
+            if !keep.contains(&name) {
+                let p = e.path();
+                let _ = if p.is_dir() { std::fs::remove_dir_all(&p) } else { std::fs::remove_file(&p) };
+            }
+        }
+    }
     let mut files = Vec::new();
     for (i, (name, url)) in parts.iter().enumerate() {
         let label = if parts.len() > 1 { format!("VOICEVOX voice engine (part {} of {})", i + 1, parts.len()) } else { "VOICEVOX voice engine".into() };

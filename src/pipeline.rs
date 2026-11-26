@@ -7,11 +7,11 @@ use crate::ocr::{self, ChangeDetector, IntervalTracker, TextInterval};
 use crate::overlay::{self, OverlayRenderer};
 use crate::translate::{TextKind, Translator};
 use crate::tts::{self, PlacedClip, Tts};
-use crate::util::{CancelToken, LogLevel, Msg, Reporter, Stage, fmt_ts, is_cancel_error};
+use crate::util::{CancelToken, LogLevel, Msg, Reporter, SetupInfo, Stage, fmt_bytes, fmt_ts, is_cancel_error};
 use crate::video::{self, MediaInfo};
 use anyhow::{Context, Result, bail};
 use std::path::{Path, PathBuf};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 pub struct Job {
     pub input: PathBuf,
@@ -163,6 +163,52 @@ fn validate(job: &Job) -> Result<()> {
     Ok(())
 }
 
+/// First run: fetches anything missing (FFmpeg, models, font, Whisper tool, offline AI brain,
+/// voice engine) into BabelCraft's own folder. The progress screen shows it as a one-time setup
+/// with what is downloading, how much is done, the speed and the time left. A cancelled download
+/// keeps what arrived and carries on from there next time.
+fn first_use_setup(cfg: &Config, rep: &Reporter, cancel: &CancelToken) -> Result<()> {
+    let missing = crate::tools::missing(cfg);
+    if missing.is_empty() {
+        return Ok(());
+    }
+    let names: Vec<&str> = missing.iter().map(|c| c.label()).collect();
+    rep.info(format!("Setting up for first use: {} (one-time download)…", names.join(", ")));
+    let count = missing.len();
+    for (i, c) in missing.iter().enumerate() {
+        cancel.check()?;
+        let mut last_what = String::new();
+        let mut last_sent: Option<Instant> = None;
+        let mut resume_noted = false;
+        let mut progress = |what: &str, f: f32| {
+            let new_item = what != last_what;
+            if new_item {
+                rep.info(format!("  ↓ {what}"));
+                last_what = what.to_string();
+                resume_noted = false;
+            }
+            let download = crate::util::current_download();
+            let mut news = new_item;
+            if let Some(d) = download.filter(|d| d.resumed_from > 0 && !resume_noted) {
+                resume_noted = true;
+                news = true;
+                let of = d.total.map(|t| format!(" of {}", fmt_bytes(t))).unwrap_or_default();
+                rep.info(format!("    carrying on from {}{of} (kept from last time)", fmt_bytes(d.resumed_from)));
+            }
+            // A few updates a second are plenty for the screen.
+            if news || last_sent.is_none_or(|t| t.elapsed() >= Duration::from_millis(200)) {
+                last_sent = Some(Instant::now());
+                let frac = download.and_then(|d| d.frac()).or((f >= 0.0).then_some(f));
+                rep.send(Msg::Setup(Some(SetupInfo { index: i + 1, count, what: what.to_string(), frac, download })));
+            }
+        };
+        crate::tools::install(*c, cfg, cancel, &mut progress).with_context(|| format!("automatic setup of {} failed", c.label()))?;
+    }
+    rep.send(Msg::Setup(None));
+    rep.log(LogLevel::Ok, "Setup complete — everything BabelCraft needs is in place.");
+    Ok(())
+}
+
 fn run(job: &Job, tmp: &Path, rep: &Reporter, cancel: &CancelToken) -> Result<PathBuf> {
     let cfg = &job.cfg;
     let t0 = Instant::now();
@@ -201,25 +247,7 @@ fn run(job: &Job, tmp: &Path, rep: &Reporter, cancel: &CancelToken) -> Result<Pa
     }
     prune_cache();
 
-    // First run: fetch anything missing (FFmpeg, models, font, Whisper tool) into BabelCraft's own folder.
-    let missing = crate::tools::missing(cfg);
-    if !missing.is_empty() {
-        let names: Vec<&str> = missing.iter().map(|c| c.label()).collect();
-        rep.info(format!("Setting up for first use: {} (one-time download)…", names.join(", ")));
-        let mut last = String::new();
-        let mut progress = |what: &str, f: f32| {
-            let head = what.split(" (").next().unwrap_or(what).to_string();
-            if head != last {
-                rep.info(format!("  ↓ {head}"));
-                last = head;
-            }
-            if f >= 0.0 {
-                rep.progress(f * 0.9);
-            }
-        };
-        crate::tools::install_missing(cfg, cancel, &mut progress)?;
-        rep.log(LogLevel::Ok, "Setup complete — everything BabelCraft needs is in place.");
-    }
+    first_use_setup(cfg, rep, cancel)?;
     let info = video::probe(cfg, &job.input, cancel)?;
     rep.info(format!(
         "Video {}x{}, {:.2} fps, {} long, audio: {}",
@@ -808,6 +836,100 @@ mod tests {
             .arg(dir.join("output_frame.png"))
             .status()
             .unwrap();
+    }
+
+    /// The one-time setup reports sizes and speed to the progress screen, and a download that was
+    /// cancelled part-way carries on from where it stopped. Downloads the OCR models (~12 MB) into
+    /// a scratch folder (never the real app folder).
+    /// Run with: BABELCRAFT_DATA_DIR=target/setuptest BABELCRAFT_TEST_FFMPEG=<path to ffmpeg>
+    ///           cargo test setup_shows_and_resumes -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn setup_shows_and_resumes() {
+        use crate::util::SetupInfo;
+        let data = std::env::var("BABELCRAFT_DATA_DIR").expect("set BABELCRAFT_DATA_DIR to a scratch folder");
+        assert!(data.contains("target"), "use a scratch folder inside target/");
+        let _ = std::fs::remove_dir_all(crate::config::models_dir().join("ocrs"));
+        let mut cfg = Config::default();
+        cfg.asr.enabled = false;
+        cfg.translation.backend = crate::config::TranslationBackend::DeepL;
+        if let Ok(f) = std::env::var("BABELCRAFT_TEST_FFMPEG") {
+            let probe = Path::new(&f).with_file_name(if cfg!(windows) { "ffprobe.exe" } else { "ffprobe" });
+            cfg.tools.ffmpeg_path = f;
+            cfg.tools.ffprobe_path = probe.display().to_string();
+        }
+        let missing = crate::tools::missing(&cfg);
+        assert!(matches!(missing.as_slice(), [crate::tools::Component::OcrModels]), "only the OCR models should be missing: {missing:?}");
+
+        let collect = |rx: crossbeam_channel::Receiver<Msg>| -> (Vec<SetupInfo>, Vec<String>, bool) {
+            let (mut setups, mut logs, mut ended) = (Vec::new(), Vec::new(), false);
+            for m in rx.try_iter() {
+                match m {
+                    Msg::Setup(Some(s)) => setups.push(s),
+                    Msg::Setup(None) => ended = true,
+                    Msg::Log(_, t) => logs.push(t),
+                    _ => {}
+                }
+            }
+            (setups, logs, ended)
+        };
+
+        // 1) Cancel once half a megabyte has arrived.
+        let (tx, rx) = crossbeam_channel::unbounded();
+        let cancel = CancelToken::default();
+        let (seen_tx, seen_rx) = crossbeam_channel::unbounded::<Msg>();
+        let c2 = cancel.clone();
+        let watcher = std::thread::spawn(move || {
+            for m in rx.iter() {
+                if let Msg::Setup(Some(s)) = &m {
+                    if s.download.is_some_and(|d| d.done > 500_000) {
+                        c2.cancel();
+                    }
+                }
+                let _ = seen_tx.send(m);
+            }
+        });
+        let rep = Reporter::new(tx, std::sync::Arc::new(|| {}));
+        let r = first_use_setup(&cfg, &rep, &cancel);
+        drop(rep);
+        watcher.join().unwrap();
+        let (setups, logs, ended) = collect(seen_rx);
+        println!("first try: {:?}", r.as_ref().map_err(|e| format!("{e:#}")));
+        for l in &logs {
+            println!("  log: {l}");
+        }
+        assert!(r.as_ref().is_err_and(is_cancel_error), "the first try should stop when cancelled");
+        assert!(!ended, "setup must not report completion after a cancel");
+        let with_size = setups.iter().find(|s| s.download.is_some_and(|d| d.total.is_some())).expect("progress with sizes");
+        println!("  e.g. {} · {:?} · {:?}", with_size.what, with_size.frac, with_size.download);
+        assert_eq!((with_size.index, with_size.count), (1, 1));
+
+        // 2) Start again: it carries on and finishes.
+        let (tx, rx) = crossbeam_channel::unbounded();
+        let rep = Reporter::new(tx, std::sync::Arc::new(|| {}));
+        let t0 = Instant::now();
+        first_use_setup(&cfg, &rep, &CancelToken::default()).unwrap();
+        drop(rep);
+        let (setups, logs, ended) = collect(rx);
+        println!("second try ({:.1} s):", t0.elapsed().as_secs_f64());
+        for l in &logs {
+            println!("  log: {l}");
+        }
+        for s in setups.iter().filter(|s| s.download.is_some()) {
+            let d = s.download.unwrap();
+            println!(
+                "  {} · {} · {:.0}% · {:.1} MB/s · left {:?}",
+                s.what,
+                crate::i18n::download_numbers(&d),
+                s.frac.unwrap_or(0.0) * 100.0,
+                d.per_sec / 1e6,
+                d.eta_secs().map(|e| e.round())
+            );
+        }
+        assert!(logs.iter().any(|l| l.contains("carrying on from")), "the second try should carry on from the kept part");
+        assert!(ended, "setup should report completion");
+        assert!(crate::tools::ocr_models_present());
+        assert!(crate::util::current_download().is_none(), "download numbers are cleared afterwards");
     }
 
     /// Downloads FFmpeg + OCR models (into target/testdata, never the real app folder), makes a

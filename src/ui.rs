@@ -8,7 +8,7 @@ use crate::config::{self, AsrEngine, AudioMode, Config, OcrEngineKind, OcrSampli
 use crate::i18n::tr;
 use crate::pipeline::{self, Job};
 use crate::tools::Component;
-use crate::util::{CancelToken, LogLevel, Msg, Reporter, Stage, fmt_duration};
+use crate::util::{CancelToken, DownloadStats, LogLevel, Msg, Reporter, SetupInfo, Stage, fmt_duration};
 use crossbeam_channel::{Receiver, unbounded};
 use eframe::egui::{
     self, Align, Align2, Color32, CornerRadius, FontData, FontDefinitions, FontFamily, FontId, Layout, Margin, RichText,
@@ -55,6 +55,10 @@ struct RunState {
     stage_started: Instant,
     done: HashSet<Stage>,
     cancelling: bool,
+    /// First-use downloads in progress (shown instead of the stage bars).
+    setup: Option<SetupInfo>,
+    /// When the real work started (after any first-use downloads), for the time-left estimate.
+    work_started: Instant,
 }
 
 enum Outcome {
@@ -67,6 +71,7 @@ enum Outcome {
 enum DlMsg {
     Label(String),
     Progress(f32),
+    Stats(Option<DownloadStats>),
     Done(Result<String, String>),
 }
 
@@ -86,6 +91,7 @@ struct Download {
     what: String,
     rx: Receiver<DlMsg>,
     frac: f32,
+    stats: Option<DownloadStats>,
     cancel: CancelToken,
 }
 
@@ -189,6 +195,9 @@ pub struct BabelApp {
     screenshot: Option<Screenshot>,
 
     run: Option<RunState>,
+    /// Scroll the page so the progress bars and time left are in view (on small screens the
+    /// progress card starts below the visible part of the window).
+    reveal_progress: bool,
     // Progress kept after a job ends so the bars stay visible.
     last_plan: Vec<Stage>,
     last_done: HashSet<Stage>,
@@ -263,6 +272,7 @@ impl BabelApp {
             splash_skipped: false,
             screenshot: screenshot.map(|path| Screenshot { path, requested: false, saved: Arc::new(AtomicBool::new(false)) }),
             run: None,
+            reveal_progress: false,
             last_plan: Vec::new(),
             last_done: HashSet::new(),
             last_overall: 0.0,
@@ -300,6 +310,9 @@ impl BabelApp {
             app.log(LogLevel::Warn, "No Japanese font found yet — see Setup checks.".into());
         }
         app.start_checks(ctx);
+        if app.screenshot.is_some() && std::env::var("BABELCRAFT_SHOT_SETUP").is_ok_and(|v| v == "1") {
+            app.show_sample_setup();
+        }
         app
     }
 
@@ -415,15 +428,46 @@ impl BabelApp {
             stage_started: Instant::now(),
             done: HashSet::new(),
             cancelling: false,
+            setup: None,
+            work_started: Instant::now(),
         });
         self.outcome = Outcome::None;
         self.show_log = true;
+        self.reveal_progress = true;
+    }
+
+    /// Screenshot mode only (BABELCRAFT_SHOT_SETUP=1): shows how a first-use download looks on the
+    /// progress screen, with sample numbers and without downloading anything.
+    fn show_sample_setup(&mut self) {
+        let (_tx, rx) = unbounded();
+        let ago = |s: u64| Instant::now().checked_sub(Duration::from_secs(s)).unwrap_or_else(Instant::now);
+        self.run = Some(RunState {
+            rx,
+            cancel: CancelToken::default(),
+            started: ago(492),
+            plan: Stage::ALL.to_vec(),
+            current: Some(Stage::Extract),
+            stage_frac: 0.0,
+            stage_started: ago(492),
+            done: HashSet::new(),
+            cancelling: false,
+            setup: Some(SetupInfo {
+                index: 2,
+                count: 3,
+                what: "AI brain model Qwen 3 · 4B".into(),
+                frac: Some(0.53),
+                download: Some(DownloadStats { done: 1_325_158_635, total: Some(2_497_281_120), per_sec: 2_700_000.0, resumed_from: 0 }),
+            }),
+            work_started: ago(492),
+        });
+        self.reveal_progress = true;
     }
 
     fn poll(&mut self, ctx: &egui::Context) {
         // Job messages
         let mut finished: Option<Outcome> = None;
         let mut new_logs = Vec::new();
+        let mut scroll_to_bars = false;
         if let Some(run) = self.run.as_mut() {
             while let Ok(m) = run.rx.try_recv() {
                 match m {
@@ -440,6 +484,18 @@ impl BabelApp {
                         new_logs.push((LogLevel::Ok, format!("Done: {} ({})", s.label(), fmt_duration(run.stage_started.elapsed().as_secs_f64()))));
                     }
                     Msg::Log(l, t) => new_logs.push((l, t)),
+                    Msg::Setup(s) => {
+                        // The download lines make the card taller: bring the bars back into view.
+                        scroll_to_bars |= s.is_some() && run.setup.is_none();
+                        if s.is_none() && run.setup.is_some() {
+                            // Downloads done: the real work (and its time estimate) starts now.
+                            let now = Instant::now();
+                            run.work_started = now;
+                            run.stage_started = now;
+                            run.stage_frac = 0.0;
+                        }
+                        run.setup = s;
+                    }
                     Msg::Finished(p) => finished = Some(Outcome::Finished { path: p, secs: run.started.elapsed().as_secs_f64() }),
                     Msg::Failed(e) => {
                         new_logs.push((LogLevel::Error, format!("× {e}")));
@@ -447,6 +503,9 @@ impl BabelApp {
                     }
                     Msg::Cancelled => {
                         new_logs.push((LogLevel::Warn, "Job cancelled; helper processes stopped and the partial file removed.".into()));
+                        if run.setup.is_some() {
+                            new_logs.push((LogLevel::Info, tr("What has downloaded so far is kept: next time it carries on where it stopped.").into()));
+                        }
                         finished = Some(Outcome::Cancelled);
                     }
                 }
@@ -455,6 +514,7 @@ impl BabelApp {
         for (l, t) in new_logs {
             self.log(l, t);
         }
+        self.reveal_progress |= scroll_to_bars;
         if let Some(o) = finished {
             if let Some(run) = self.run.take() {
                 self.last_overall = if matches!(o, Outcome::Finished { .. }) { 1.0 } else { overall_of(&run) };
@@ -479,6 +539,7 @@ impl BabelApp {
                 match m {
                     DlMsg::Label(l) => dl.what = l,
                     DlMsg::Progress(f) => dl.frac = f,
+                    DlMsg::Stats(s) => dl.stats = s,
                     DlMsg::Done(r) => dl_done = Some((dl.task.clone(), r)),
                 }
             }
@@ -556,11 +617,18 @@ impl BabelApp {
         }
 
         if let Some(run) = &self.run {
-            let pct = (overall_of(run) * 100.0).round();
-            ctx.send_viewport_cmd(egui::ViewportCommand::Title(format!(
-                "BabelCraft — {pct:.0}% · {}",
-                run.current.map(|s| s.short()).unwrap_or("Starting")
-            )));
+            let title = match &run.setup {
+                Some(s) => format!(
+                    "BabelCraft — setup: downloading{}",
+                    s.frac.map(|f| format!(" {:.0}%", pct_down(f))).unwrap_or_default()
+                ),
+                None => format!(
+                    "BabelCraft — {:.0}% · {}",
+                    (overall_of(run) * 100.0).round(),
+                    run.current.map(|s| s.short()).unwrap_or("Starting")
+                ),
+            };
+            ctx.send_viewport_cmd(egui::ViewportCommand::Title(title));
             ctx.request_repaint_after(Duration::from_millis(250));
         }
         if self.checks_rx.is_some() || self.download.is_some() || self.test_rx.is_some() || self.models_rx.is_some() || self.inventory_rx.is_some() {
@@ -601,6 +669,8 @@ impl BabelApp {
                     last = Instant::now();
                     let _ = tx2.send(DlMsg::Label(what.to_string()));
                     let _ = tx2.send(DlMsg::Progress(f.max(0.0)));
+                    // Sizes, speed and time left of the file downloading on this thread.
+                    let _ = tx2.send(DlMsg::Stats(crate::util::current_download()));
                     ctx3.request_repaint();
                 }
             };
@@ -608,21 +678,29 @@ impl BabelApp {
             let _ = tx.send(DlMsg::Done(r));
             ctx2.request_repaint();
         });
-        self.download = Some(Download { task, what, rx, frac: 0.0, cancel });
+        self.download = Some(Download { task, what, rx, frac: 0.0, stats: None, cancel });
     }
 
     /// The shared progress line for whatever is downloading.
     fn download_bar(&mut self, ui: &mut egui::Ui) {
         if let Some(dl) = &self.download {
             ui.add_space(6.0);
-            ui.horizontal(|ui| {
+            ui.horizontal_wrapped(|ui| {
                 ui.spinner();
-                ui.label(RichText::new(format!("{} {}", tr("Downloading"), dl.what)).color(CREAM));
+                let mut line = format!("{} {}", tr("Downloading"), crate::i18n::tr_step(&dl.what));
+                if let Some(d) = &dl.stats {
+                    line.push_str(" — ");
+                    line.push_str(&crate::i18n::download_numbers(d));
+                    if let Some(eta) = d.eta_secs() {
+                        line.push_str(&crate::i18n::time_left(&fmt_duration(eta)));
+                    }
+                }
+                ui.label(RichText::new(line).color(CREAM));
                 if ui.small_button(tr("Stop")).clicked() {
                     dl.cancel.cancel();
                 }
             });
-            big_bar(ui, dl.frac, 10.0, YELLOW, "");
+            big_bar(ui, dl.stats.and_then(|d| d.frac()).unwrap_or(dl.frac), 10.0, YELLOW, "");
         }
     }
 }
@@ -1283,6 +1361,10 @@ impl BabelApp {
             ),
         };
         let running = self.running();
+        // First-use downloads, and how long the real work has been going (for the time left).
+        let setup = self.run.as_ref().and_then(|r| r.setup.clone());
+        let work_elapsed = self.run.as_ref().map(|r| r.work_started.elapsed().as_secs_f64());
+        let scroll_to_bars = std::mem::take(&mut self.reveal_progress);
         card(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.label(RichText::new(tr("2  ·  Translate to Japanese")).size(17.0).strong().color(CREAM));
@@ -1337,26 +1419,58 @@ impl BabelApp {
             }
             ui.add_space(14.0);
 
-            let headline = match (&current, &self.outcome) {
-                (Some(s), _) => format!("{}…", tr(s.label())),
-                (None, Outcome::Finished { .. }) => tr("Finished — your Japanese video is ready").into(),
-                (None, Outcome::Failed(_)) => tr("Stopped with an error").into(),
-                (None, Outcome::Cancelled) => tr("Cancelled").into(),
-                (None, Outcome::None) if running => tr("Starting…").into(),
-                (None, Outcome::None) => tr("Ready when you are").into(),
+            let headline = match (&setup, &current, &self.outcome) {
+                (Some(s), _, _) => crate::i18n::setup_headline(s.index, s.count),
+                (None, Some(s), _) => format!("{}…", tr(s.label())),
+                (None, None, Outcome::Finished { .. }) => tr("Finished — your Japanese video is ready").into(),
+                (None, None, Outcome::Failed(_)) => tr("Stopped with an error").into(),
+                (None, None, Outcome::Cancelled) => tr("Cancelled").into(),
+                (None, None, Outcome::None) if running => tr("Starting…").into(),
+                (None, None, Outcome::None) => tr("Ready when you are").into(),
             };
             ui.label(RichText::new(headline).size(20.0).strong().color(CREAM));
+            if let Some(s) = &setup {
+                // What is downloading, how much is done and how fast — so a long first download never looks stuck.
+                let mut line = crate::i18n::tr_step(&s.what);
+                if let Some(d) = &s.download {
+                    line.push_str("  —  ");
+                    line.push_str(&crate::i18n::download_numbers(d));
+                }
+                ui.add_space(2.0);
+                ui.label(RichText::new(line).size(15.0).color(YELLOW));
+                ui.label(
+                    RichText::new(tr("Only needed once. If you cancel, what has downloaded is kept and carries on next time."))
+                        .size(12.5)
+                        .color(MUTED),
+                );
+            }
             ui.add_space(6.0);
 
-            big_bar(ui, overall, 30.0, YELLOW, &format!("{}  {:.0}%", tr("Overall"), overall * 100.0));
-            ui.add_space(6.0);
-            big_bar(ui, stage_frac, 14.0, Color32::from_rgb(214, 196, 140), "");
+            if let Some(s) = &setup {
+                let f = s.frac.unwrap_or(0.0);
+                let text = match s.frac {
+                    Some(f) => format!("{}  {:.0}%", tr("Download"), pct_down(f)),
+                    None => tr("Please wait…").into(),
+                };
+                big_bar(ui, f, 30.0, YELLOW, &text);
+                ui.add_space(6.0);
+                // How far through the list of downloads.
+                let steps = ((s.index.saturating_sub(1)) as f32 + f) / s.count.max(1) as f32;
+                big_bar(ui, steps, 14.0, Color32::from_rgb(214, 196, 140), "");
+            } else {
+                big_bar(ui, overall, 30.0, YELLOW, &format!("{}  {:.0}%", tr("Overall"), overall * 100.0));
+                ui.add_space(6.0);
+                big_bar(ui, stage_frac, 14.0, Color32::from_rgb(214, 196, 140), "");
+            }
             ui.add_space(8.0);
 
-            let eta = match elapsed {
-                Some(e) if overall > 0.015 => fmt_duration(e * (1.0 - overall as f64) / overall as f64),
-                Some(_) => tr("estimating…").into(),
-                None => "—".into(),
+            let eta = match (&setup, work_elapsed) {
+                // During the downloads: their own time left.
+                (Some(s), _) => s.download.and_then(|d| d.eta_secs()).map(fmt_duration).unwrap_or_else(|| tr("estimating…").into()),
+                // Afterwards: from the work done since, so download time doesn't stretch the estimate.
+                (None, Some(w)) if overall > 0.015 => fmt_duration(w * (1.0 - overall as f64) / overall as f64),
+                (None, Some(_)) => tr("estimating…").into(),
+                (None, None) => "—".into(),
             };
             let elapsed_txt = elapsed.map(fmt_duration).unwrap_or_else(|| match &self.outcome {
                 Outcome::Finished { secs, .. } => fmt_duration(*secs),
@@ -1364,13 +1478,20 @@ impl BabelApp {
             });
             ui.horizontal(|ui| {
                 stat(ui, tr("Overall"), &format!("{:.0}%", overall * 100.0));
-                stat(ui, tr("Stage"), &format!("{:.0}%", stage_frac * 100.0));
+                match &setup {
+                    Some(s) => stat(ui, tr("Download"), &s.frac.map(|f| format!("{:.0}%", pct_down(f))).unwrap_or_else(|| "—".into())),
+                    None => stat(ui, tr("Stage"), &format!("{:.0}%", stage_frac * 100.0)),
+                }
                 stat(ui, tr("Elapsed"), &elapsed_txt);
-                stat(ui, tr("Time left (ETA)"), &eta);
-                if let Some(se) = stage_elapsed {
+                stat(ui, if setup.is_some() { tr("Time left (download)") } else { tr("Time left (ETA)") }, &eta);
+                if let (Some(se), None) = (stage_elapsed, &setup) {
                     stat(ui, tr("This stage"), &fmt_duration(se));
                 }
             });
+            if scroll_to_bars {
+                // Just started (or a download began): make sure the bars and time left are on screen.
+                ui.scroll_to_cursor(Some(Align::BOTTOM));
+            }
 
             match &self.outcome {
                 Outcome::Finished { path, .. } => {
@@ -2060,6 +2181,11 @@ impl eframe::App for BabelApp {
 
 // --------------------------------------------------------------------- helpers
 
+/// Whole percent, rounded down, so 100% only shows once a download is really complete.
+fn pct_down(f: f32) -> f32 {
+    (f * 100.0 + 0.001).floor().clamp(0.0, 100.0)
+}
+
 fn overall_of(run: &RunState) -> f32 {
     let total: f32 = run.plan.iter().map(|s| s.weight()).sum::<f32>().max(1.0);
     let done: f32 = run.plan.iter().filter(|s| run.done.contains(s)).map(|s| s.weight()).sum();
@@ -2136,8 +2262,12 @@ fn big_bar(ui: &mut egui::Ui, frac: f32, h: f32, color: Color32, text: &str) {
         p.rect_filled(fill, r, color);
     }
     if !text.is_empty() {
-        let col = if frac > 0.12 { INK } else { CREAM };
-        p.text(egui::pos2(rect.left() + 12.0, rect.center().y), Align2::LEFT_CENTER, text, FontId::proportional(15.0), col);
+        // Dark text only when the whole label sits on the filled part; light text otherwise.
+        let font = FontId::proportional(15.0);
+        let text_w = p.layout_no_wrap(text.to_string(), font.clone(), CREAM).size().x;
+        let filled_right = rect.left() + (rect.width() * frac.clamp(0.0, 1.0)).max(if frac > 0.0 { h } else { 0.0 });
+        let col = if filled_right >= rect.left() + 12.0 + text_w + 6.0 { INK } else { CREAM };
+        p.text(egui::pos2(rect.left() + 12.0, rect.center().y), Align2::LEFT_CENTER, text, font, col);
     }
 }
 
