@@ -55,13 +55,19 @@ pub struct TextInterval {
     pub japanese: String,
 }
 
+/// Tesseract's language data to read the video's on-screen text with.
+pub fn ocr_language(cfg: &Config) -> String {
+    let src = cfg.source_lang();
+    if src.code == "en" { cfg.ocr.language.clone() } else { src.tesseract_code().unwrap_or("eng").to_string() }
+}
+
 /// Runs Tesseract on one image file and groups words into paragraphs/lines.
 /// `scale` converts OCR-frame pixels back to source-video pixels.
 pub fn run_tesseract(cfg: &Config, image: &Path, scale: f32, min_line_h: f32, cancel: &CancelToken) -> Result<Vec<Detection>> {
     let mut cmd = silent_command(cfg.tesseract());
     cmd.arg(image)
         .arg("stdout")
-        .args(["-l", &cfg.ocr.language, "--psm", &cfg.ocr.psm.to_string(), "-c", "preserve_interword_spaces=1", "tsv"]);
+        .args(["-l", &ocr_language(cfg), "--psm", &cfg.ocr.psm.to_string(), "-c", "preserve_interword_spaces=1", "tsv"]);
     let out = run_process(cmd, cancel, None, |_, _| {})?.ok_or_err("tesseract")?;
     Ok(parse_tsv(&out.stdout, cfg.ocr.min_confidence, scale, min_line_h))
 }
@@ -225,7 +231,20 @@ pub fn parse_tsv(tsv: &str, min_conf: f32, scale: f32, min_line_h: f32) -> Vec<D
 
 /// Rejects OCR noise: needs mostly-letter content, and most of its words (3+ letters) must
 /// look like real words rather than misread icons and graphics.
+/// Set by each job: the video's text is English (the strict English noise filter applies).
+static SOURCE_ENGLISH: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+
+pub fn set_source_english(on: bool) {
+    SOURCE_ENGLISH.store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
 fn looks_like_english(t: &str) -> bool {
+    if !SOURCE_ENGLISH.load(std::sync::atomic::Ordering::Relaxed) {
+        // Other languages: needs mostly letters/digits and at least two letters.
+        let visible = t.chars().filter(|c| !c.is_whitespace()).count();
+        let letters = t.chars().filter(|c| c.is_alphabetic()).count();
+        return letters >= 2 && visible > 0 && (letters as f32 / visible as f32) >= 0.55;
+    }
     let letters = t.chars().filter(|c| c.is_ascii_alphabetic()).count();
     let visible = t.chars().filter(|c| !c.is_whitespace()).count();
     if letters < 2 || visible == 0 || (letters as f32 / visible as f32) < 0.55 {

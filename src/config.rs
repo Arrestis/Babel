@@ -63,7 +63,14 @@ pub struct TranslationConfig {
     pub temperature: f32,
     /// Extra instruction for the translator (tone, glossary...).
     pub style_hint: String,
+    /// The video's language and the language it is translated into (codes from
+    /// `langs::LANGUAGES`); English → Japanese unless chosen otherwise.
+    pub source_language: String,
+    pub target_language: String,
 }
+
+/// The style hint new settings start with (made for Japanese; other languages get their own).
+pub const JAPANESE_STYLE_HINT: &str = "Natural, polite spoken Japanese (です・ます調). Keep names and numbers.";
 
 impl Default for TranslationConfig {
     fn default() -> Self {
@@ -81,7 +88,9 @@ impl Default for TranslationConfig {
             libre_url: "http://localhost:5000".into(),
             batch_size: 12,
             temperature: 0.2,
-            style_hint: "Natural, polite spoken Japanese (です・ます調). Keep names and numbers.".into(),
+            style_hint: JAPANESE_STYLE_HINT.into(),
+            source_language: "en".into(),
+            target_language: "ja".into(),
         }
     }
 }
@@ -483,12 +492,43 @@ impl Config {
         Ok(())
     }
 
-    /// Whisper model file actually used.
+    /// The video's language (English when unset or unknown).
+    pub fn source_lang(&self) -> &'static crate::langs::Lang {
+        crate::langs::find(&self.translation.source_language).unwrap_or_else(crate::langs::english)
+    }
+
+    /// The language the video is translated into (Japanese when unset or unknown).
+    pub fn target_lang(&self) -> &'static crate::langs::Lang {
+        crate::langs::find(&self.translation.target_language).unwrap_or_else(crate::langs::japanese)
+    }
+
+    /// The style hint for the translator. The hint made for Japanese is swapped for a matching
+    /// one when translating into another language; a hint the person wrote is kept as it is.
+    pub fn style_hint_for_target(&self) -> String {
+        let t = self.target_lang();
+        let hint = self.translation.style_hint.trim();
+        if t.code != "ja" && (hint.is_empty() || hint == JAPANESE_STYLE_HINT) {
+            format!("Natural, fluent spoken {}. Keep names and numbers.", t.english)
+        } else {
+            hint.to_string()
+        }
+    }
+
+    /// Whisper model file actually used. English-only models (".en") can't hear other
+    /// languages, so for those the matching multilingual model is used instead.
     pub fn whisper_model(&self) -> PathBuf {
-        if self.asr.model_path.trim().is_empty() {
+        let chosen = if self.asr.model_path.trim().is_empty() {
             models_dir().join(DEFAULT_WHISPER_MODEL)
         } else {
             PathBuf::from(self.asr.model_path.trim())
+        };
+        if self.source_lang().code == "en" {
+            return chosen;
+        }
+        let name = chosen.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+        match name.strip_suffix(".en.bin") {
+            Some(stem) => chosen.with_file_name(format!("{stem}.bin")),
+            None => chosen,
         }
     }
 

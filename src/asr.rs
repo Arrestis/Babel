@@ -81,7 +81,7 @@ fn api(cfg: &Config, wav: &Path, tmp: &Path, cancel: &CancelToken, mut on_frac: 
         }
         let bytes = std::fs::read(&path)?;
         let _ = std::fs::remove_file(&path);
-        let v = post_transcription(&agent, base, &key, &a.api_model, bytes)?;
+        let v = post_transcription(&agent, base, &key, &a.api_model, cfg.source_lang().whisper_code(), bytes)?;
         match v["segments"].as_array() {
             Some(segs) if !segs.is_empty() => {
                 for s in segs {
@@ -107,12 +107,14 @@ fn api(cfg: &Config, wav: &Path, tmp: &Path, cancel: &CancelToken, mut on_frac: 
 }
 
 /// POST /audio/transcriptions as multipart/form-data.
-fn post_transcription(agent: &ureq::Agent, base: &str, key: &str, model: &str, wav: Vec<u8>) -> Result<serde_json::Value> {
+fn post_transcription(agent: &ureq::Agent, base: &str, key: &str, model: &str, cfg_lang: Option<&str>, wav: Vec<u8>) -> Result<serde_json::Value> {
     let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
     let boundary = format!("----BabelCraft{stamp:x}");
     let mut body: Vec<u8> = Vec::with_capacity(wav.len() + 1024);
     let model = if model.trim().is_empty() { "whisper-1" } else { model.trim() };
-    for (name, value) in [("model", model), ("language", "en"), ("response_format", "verbose_json"), ("temperature", "0")] {
+    let lang = cfg_lang.unwrap_or("");
+    for (name, value) in [("model", model), ("language", lang), ("response_format", "verbose_json"), ("temperature", "0")] {
+        if value.is_empty() { continue; }
         body.extend_from_slice(format!("--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n").as_bytes());
     }
     body.extend_from_slice(
@@ -224,7 +226,7 @@ pub fn clean_segments(raw: Vec<Segment>) -> Vec<Segment> {
 fn cli(cfg: &Config, model: &Path, wav: &Path, tmp: &Path, cancel: &CancelToken, mut on_frac: impl FnMut(f32)) -> Result<Vec<Segment>> {
     let out_base = tmp.join("whisper_out");
     let mut cmd = silent_command(cfg.whisper_cli());
-    cmd.arg("-m").arg(model).arg("-f").arg(wav).args(["-l", "en", "-oj", "-pp"]).arg("-of").arg(&out_base);
+    cmd.arg("-m").arg(model).arg("-f").arg(wav).args(["-l", cfg.source_lang().whisper_code().unwrap_or("auto"), "-oj", "-pp"]).arg("-of").arg(&out_base);
     if cfg.asr.threads > 0 {
         cmd.args(["-t", &cfg.asr.threads.to_string()]);
     }
@@ -272,7 +274,7 @@ fn builtin(cfg: &Config, model: &Path, wav: &Path, cancel: &CancelToken, on_frac
     let mut state = ctx.create_state().context("could not create Whisper state")?;
 
     let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 1 });
-    params.set_language(Some("en"));
+    params.set_language(Some(cfg.source_lang().whisper_code().unwrap_or("auto")));
     let threads = if cfg.asr.threads > 0 {
         cfg.asr.threads as i32
     } else {

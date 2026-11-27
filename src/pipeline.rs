@@ -86,7 +86,7 @@ fn ocr_cache_key(cfg: &Config, input: &Path) -> String {
         o.min_duration_ms,
         o.min_text_height_percent,
         o.psm,
-        o.language
+        ocr::ocr_language(cfg)
     )
 }
 
@@ -97,7 +97,7 @@ fn asr_cache_key(cfg: &Config, input: &Path) -> String {
     } else {
         format!("{:?}|{}", a.engine, cfg.whisper_model().display())
     };
-    format!("speech-v1|{}|{engine}", input_identity(input))
+    format!("speech-v2|{}|{engine}|{}", input_identity(input), cfg.source_lang().code)
 }
 
 fn cache_file(kind: &str, key: &str) -> PathBuf {
@@ -211,7 +211,32 @@ fn first_use_setup(cfg: &Config, rep: &Reporter, cancel: &CancelToken) -> Result
 }
 
 fn run(job: &Job, tmp: &Path, rep: &Reporter, cancel: &CancelToken) -> Result<PathBuf> {
-    let cfg = &job.cfg;
+    let mut adjusted = job.cfg.clone();
+    let (src, dst) = (adjusted.source_lang(), adjusted.target_lang());
+    ocr::set_source_english(src.code == "en");
+    if src.code == dst.code {
+        bail!("The video's language and the language to translate into are both {} — choose two different languages.", src.english);
+    }
+    // The built-in text reader only knows English; other languages are read with Tesseract.
+    if src.code != "en" && adjusted.ocr.enabled {
+        if adjusted.ocr.engine == crate::config::OcrEngineKind::Builtin {
+            adjusted.ocr.engine = crate::config::OcrEngineKind::Tesseract;
+        }
+        let langs = crate::tools::tesseract_languages(&adjusted);
+        let want = ocr::ocr_language(&adjusted);
+        match langs {
+            None => {
+                rep.warn(format!("On-screen text in {} needs Tesseract (not found) — skipping on-screen text. Install Tesseract with the {} language data to translate it.", src.english, src.english));
+                adjusted.ocr.enabled = false;
+            }
+            Some(l) if !l.is_empty() && !l.iter().any(|x| *x == want) => {
+                rep.warn(format!("Tesseract has no '{want}' language data — skipping on-screen text. Install it to translate on-screen {} text.", src.english));
+                adjusted.ocr.enabled = false;
+            }
+            _ => {}
+        }
+    }
+    let cfg = &adjusted;
     let t0 = Instant::now();
     validate(job)?;
     std::fs::create_dir_all(tmp)?;
@@ -260,16 +285,21 @@ fn run(job: &Job, tmp: &Path, rep: &Reporter, cancel: &CancelToken) -> Result<Pa
     ));
 
     let font = if cfg.ocr.enabled {
-        let f = crate::fonts::find_cjk_font(&cfg.overlay.font_path).context(
-            "No Japanese (CJK) font found — on-screen text would render as □□□. \
-             Open Setup checks and press \"Download Noto Sans JP\", or choose a font in Settings → On-screen text.",
-        )?;
-        rep.info(format!("Japanese font: {}", f.path.display()));
+        let mut found = crate::fonts::find_overlay_font(dst, &cfg.overlay.font_path);
+        if found.is_none() {
+            if let Some((file, url)) = crate::fonts::overlay_font_download(dst) {
+                rep.info(format!("Downloading a font for {}…", dst.english));
+                let mut quiet = |_: &str, _: f32| {};
+                crate::tools::fetch(url, &crate::config::fonts_dir().join(file), "Font", cancel, &mut quiet)?;
+                found = crate::fonts::find_overlay_font(dst, &cfg.overlay.font_path);
+            }
+        }
+        let f = found.with_context(|| format!("No font with {} letters found — on-screen text would render as □□□. Choose a font in Settings → On-screen text.", dst.english))?;
+        rep.info(format!("Font for {}: {}", dst.english, f.path.display()));
         Some(f)
     } else {
         None
     };
-
     let do_asr = cfg.asr.enabled && info.has_audio;
     if cfg.asr.enabled && !info.has_audio {
         rep.warn("The video has no audio track — skipping speech transcription and dubbing.");
@@ -391,7 +421,7 @@ fn run(job: &Job, tmp: &Path, rep: &Reporter, cancel: &CancelToken) -> Result<Pa
         // Text the translator kept in English (names, web addresses, codes, misread bits)
         // gets no box: a box with the same English would only hide the original.
         let before = intervals.len();
-        intervals.retain(|i| has_japanese(&i.japanese));
+        intervals.retain(|i| is_translated(&i.english, &i.japanese, dst));
         if intervals.len() < before {
             rep.info(format!(
                 "Left {} on-screen texts as they are (names, addresses or codes the translator kept in English).",
@@ -411,11 +441,11 @@ fn run(job: &Job, tmp: &Path, rep: &Reporter, cancel: &CancelToken) -> Result<Pa
 
     // Japanese subtitle file next to the video (handy for checking the translation).
     if !segments.is_empty() {
-        let srt = subtitle_path(&job.output);
+        let srt = subtitle_path_for(&job.output, dst.code);
         if let Err(e) = write_srt(&srt, &segments) {
             rep.warn(format!("Could not write subtitles: {e}"));
         } else {
-            rep.info(format!("Japanese subtitles saved: {}", srt.display()));
+            rep.info(format!("{} subtitles saved: {}", dst.english, srt.display()));
         }
     }
 
@@ -444,8 +474,8 @@ fn run(job: &Job, tmp: &Path, rep: &Reporter, cancel: &CancelToken) -> Result<Pa
     rep.send(Msg::StageStart(Stage::Render));
     let mut overlay_list = None;
     if let (Some(font), false) = (font.as_ref(), intervals.is_empty()) {
-        rep.info("Drawing Japanese text overlays…");
-        let renderer = OverlayRenderer::new(cfg, font)?;
+        rep.info(format!("Drawing {} text overlays…", dst.english));
+        let renderer = OverlayRenderer::new(cfg, font, dst)?;
         overlay_list = overlay::build_overlay_stream(
             &renderer,
             &intervals,
@@ -595,9 +625,28 @@ fn has_japanese(s: &str) -> bool {
 }
 
 /// `video.ja.mp4` → `video.ja.srt`; `video.mp4` → `video.ja.srt`.
+#[allow(dead_code)]
 pub fn subtitle_path(output: &Path) -> PathBuf {
-    let already_ja = output.file_stem().map(|s| s.to_string_lossy().to_ascii_lowercase().ends_with(".ja")).unwrap_or(false);
-    if already_ja { output.with_extension("srt") } else { output.with_extension("ja.srt") }
+    subtitle_path_for(output, "ja")
+}
+
+pub fn subtitle_path_for(output: &Path, code: &str) -> PathBuf {
+    let tag = format!(".{}", code.to_ascii_lowercase());
+    let already = output.file_stem().map(|s| s.to_string_lossy().to_ascii_lowercase().ends_with(&tag)).unwrap_or(false);
+    if already { output.with_extension("srt") } else { output.with_extension(format!("{code}.srt")) }
+}
+
+/// The translation is real text in the target language (not the original left as it was).
+/// Japanese and Chinese are told by their characters; other languages by differing from the original.
+fn is_translated(original: &str, translated: &str, dst: &crate::langs::Lang) -> bool {
+    let t = translated.trim();
+    if t.is_empty() {
+        return false;
+    }
+    match dst.script {
+        crate::langs::Script::Japanese => has_japanese(t),
+        _ => !t.eq_ignore_ascii_case(original.trim()),
+    }
 }
 
 fn write_srt(path: &Path, segs: &[Segment]) -> Result<()> {
@@ -763,7 +812,7 @@ mod tests {
         }
         // Title card with dark English text on a light background.
         let font = crate::fonts::find_cjk_font("").expect("font");
-        let r = OverlayRenderer::new(&cfg, &font).unwrap();
+        let r = OverlayRenderer::new(&cfg, &font, crate::langs::japanese()).unwrap();
         let mut card = image::RgbaImage::from_pixel(1280, 720, image::Rgba([250, 250, 245, 255]));
         let mut title = r.render_box("Cooking Basics: Perfect Rice", &ocr::BBox { x: 190.0, y: 300.0, w: 900.0, h: 100.0 }, 1280, 720).unwrap();
         for p in title.img.pixels_mut() {
@@ -959,7 +1008,7 @@ mod tests {
         let dir = std::path::PathBuf::from("target/e2e");
         let _ = std::fs::create_dir_all(&dir);
         let font = crate::fonts::find_cjk_font("").expect("font");
-        let r = OverlayRenderer::new(&cfg, &font).unwrap();
+        let r = OverlayRenderer::new(&cfg, &font, crate::langs::japanese()).unwrap();
         let mut card = image::RgbaImage::from_pixel(1280, 720, image::Rgba([250, 250, 245, 255]));
         let mut title = r.render_box("Welcome to the course", &ocr::BBox { x: 240.0, y: 260.0, w: 800.0, h: 90.0 }, 1280, 720).unwrap();
         for p in title.img.pixels_mut() {

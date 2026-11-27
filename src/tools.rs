@@ -270,6 +270,17 @@ pub fn install_font(cancel: &CancelToken, progress: Progress) -> Result<()> {
     fetch(crate::fonts::NOTO_URL, &dest, "Japanese font (Noto Sans JP)", cancel, progress)
 }
 
+/// The language data Tesseract has (None when Tesseract can't be run).
+pub fn tesseract_languages(cfg: &Config) -> Option<Vec<String>> {
+    let exe = cfg.tesseract();
+    if !works(&exe, "--version") {
+        return None;
+    }
+    let out = crate::util::silent_command(&exe).arg("--list-langs").stdin(std::process::Stdio::null()).output().ok()?;
+    let text = format!("{}{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
+    Some(text.lines().skip(1).map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect())
+}
+
 /// Everything BabelCraft can download and set up by itself.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Component {
@@ -312,7 +323,7 @@ pub fn missing(cfg: &Config) -> Vec<Component> {
         if cfg.ocr.engine == crate::config::OcrEngineKind::Builtin && !ocr_models_present() {
             v.push(Component::OcrModels);
         }
-        if crate::fonts::find_cjk_font(&cfg.overlay.font_path).is_none() {
+        if cfg.target_lang().code == "ja" && crate::fonts::find_cjk_font(&cfg.overlay.font_path).is_none() {
             v.push(Component::Font);
         }
     }
@@ -335,6 +346,7 @@ pub fn missing(cfg: &Config) -> Vec<Component> {
     if cfg.asr.enabled
         && cfg.tts.backend == TtsBackend::Voicevox
         && cfg.tts.voicevox_auto_start
+        && cfg.target_lang().code == "ja"
         && crate::voicevox::engine_exe().is_none()
         && crate::voicevox::installable()
         && crate::voicevox::reachable(&cfg.tts.voicevox_url).is_none()

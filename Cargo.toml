@@ -1,6 +1,6 @@
-﻿[package]
+[package]
 name = "babelcraft"
-version = "1.2.0"
+version = "1.3.0"
 edition = "2024"
 description = "Translate English videos (on-screen text + speech) into Japanese and render a finished dubbed video."
 license = "GPL-3.0-or-later"
@@ -35,6 +35,10 @@ anyhow = "1"
 crossbeam-channel = "0.5"
 image ={ version = "0.25", default-features = false, features = ["png", "ico"] }
 ab_glyph = "0.2"
+# Text shaping for the video overlays (joined Arabic letters, Indian and Thai scripts…) — the
+# same shaper egui uses — and splitting text into user-perceived characters.
+harfrust = "0.12"
+unicode-segmentation = "1.13"
 hound = "3.5"
 whisper-rs = { version = "0.16", optional = true }
 ocrs = { version = "0.14", default-features = false, features = ["onnx"] }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0
+
+### New
+- **Translate between any two of 115 languages, both ways** — English → Japanese is still the default, but the video language and the language to translate into are now chosen on the main page (with a swap button): Japanese → English, Spanish → Korean, Arabic → Hindi… Speech is recognised in the video's language (Whisper, multilingual model downloaded automatically), translated, and dubbed.
+- **Dubbing in other languages** uses Piper: BabelCraft downloads the Piper program and one natural voice for the language once, and runs it hidden (VOICEVOX is still used for Japanese).
+- **On-screen text** in the target language is drawn with properly shaped letters (joined Arabic, Hindi, Thai, Chinese, Korean…), with a matching font found or downloaded. Subtitle files and the dub's audio tag use the target language (ideo.es.srt).
+- Text in non-English videos is read with Tesseract (install it with the language's data); English still uses the built-in reader.
+
 ## 1.2.0
 
 ### New

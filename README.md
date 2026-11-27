@@ -52,6 +52,13 @@ BabelCraft starts in **English**. To change the language of its buttons and menu
 - The video itself is still translated from English into Japanese; the interface language only changes BabelCraft's own text.
 - Translators: the texts are in `assets/i18n/` — `en.txt` lists every English text with its id, and `<code>.txt` holds a language's translations as `<id><TAB><text>` lines.
 
+## Any language to any language
+
+- On the main page choose the **video language** and the **language to translate into** (115 languages; ⇄ swaps them). English → Japanese is the default.
+- Speech: Whisper (multilingual model, downloaded automatically). Translation: any translator in Settings. Voice: VOICEVOX for Japanese; Piper (downloaded once, free, offline) for the other languages with a Piper voice — for the rest, pick another voice engine in Settings.
+- On-screen text: English uses the built-in reader; other video languages need Tesseract with that language's data.
+- Drawn text uses the right letters and shaping for the target language; subtitles are written as ideo.<code>.srt.
+
 ## Everything it uses — and where it comes from
 
 The **⬇ AI models & downloads** page inside the app shows each item, whether it is already on your computer, and a **Download** button. All of these are fetched automatically when a job needs them:
@@ -215,11 +222,11 @@ babelcraft --version
 1. Put these files in your repository folder (e.g. a clone of `https://github.com/Arrestis/Babel`), then:
    ```bash
    git add .
-   git commit -m "BabelCraft 1.2.0"
+   git commit -m "BabelCraft 1.3.0"
    git push
    ```
 2. **Actions** builds every platform on each push (`.github/workflows/release.yml`).
-3. To publish downloads: `git tag v1.2.0 && git push origin v1.2.0` → a Release is created with:
+3. To publish downloads: `git tag v1.3.0 && git push origin v1.3.0` → a Release is created with:
    Windows x64 / x86 / ARM64 / x64-whisper `.msi` installers and `.zip` files, Linux x86_64 / aarch64 `.tar.gz` + `.deb` + `.AppImage` (+ x86_64-whisper), macOS universal `.dmg` (+ `-metal`).
 
 ## Project layout
@@ -235,6 +242,7 @@ src/ui.rs               egui interface: splash, files, settings, progress, setup
                         log, the speaking-mouth language button and menu
 src/i18n.rs             interface language: tr(), built-in and AI-made translations
 src/langs.rs            the 115 interface languages (own name, English name, writing system)
+src/piper.rs             Piper voices for dubbing into other languages
 src/interface.rs        puts the interface into any language (font download + AI translation)
 src/pipeline.rs         background job orchestration, progress, cancel, cleanup, SRT
 src/video.rs            FFprobe/FFmpeg: probe, audio extraction, frame streaming, final render

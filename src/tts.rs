@@ -13,6 +13,15 @@ use std::path::{Path, PathBuf};
 pub struct Tts {
     cfg: Config,
     agent: ureq::Agent,
+    /// Piper's voice for the target language, when it is dubbed with Piper.
+    piper_voice: std::sync::Mutex<Option<PathBuf>>,
+}
+
+impl Tts {
+    /// VOICEVOX only speaks Japanese: other languages are dubbed with Piper (downloaded once).
+    fn uses_auto_piper(&self) -> bool {
+        self.cfg.target_lang().code != "ja" && matches!(self.cfg.tts.backend, TtsBackend::Voicevox)
+    }
 }
 
 /// Lists (Windows) or uses (macOS) the Japanese voices built into the computer.
@@ -58,12 +67,22 @@ pub fn system_voices() -> Vec<String> {
 
 impl Tts {
     pub fn new(cfg: &Config) -> Self {
-        Self { cfg: cfg.clone(), agent: http_agent(180) }
+        Self { cfg: cfg.clone(), agent: http_agent(180), piper_voice: std::sync::Mutex::new(None) }
     }
 
     /// Starts what the chosen voice needs on this computer (the VOICEVOX engine).
     /// Keep the returned guard while synthesizing; dropping it stops what was started.
     pub fn prepare(&self, cancel: &CancelToken, status: &mut dyn FnMut(String)) -> Result<Option<StopOnDrop>> {
+        if self.uses_auto_piper() {
+            let lang = self.cfg.target_lang();
+            let mut progress = |what: &str, _f: f32| status(what.to_string());
+            if crate::piper::engine_exe().is_none() {
+                crate::piper::install_engine(cancel, &mut progress)?;
+            }
+            let model = crate::piper::install_voice(lang, cancel, &mut progress)?;
+            *self.piper_voice.lock().unwrap_or_else(|e| e.into_inner()) = Some(model);
+            return Ok(None);
+        }
         match self.cfg.tts.backend {
             TtsBackend::Voicevox => crate::voicevox::ensure_running(&self.cfg, cancel, status),
             _ => Ok(None),
@@ -74,6 +93,15 @@ impl Tts {
     pub fn synthesize(&self, text: &str, out_base: &Path, cancel: &CancelToken) -> Result<PathBuf> {
         cancel.check()?;
         let t = &self.cfg.tts;
+        if self.uses_auto_piper() {
+            let model = self.piper_voice.lock().unwrap_or_else(|e| e.into_inner()).clone().context("no Piper voice set up")?;
+            let exe = crate::piper::engine_exe().context("Piper is not set up")?;
+            let out = out_base.with_extension("wav");
+            let mut cmd = silent_command(exe);
+            cmd.arg("--model").arg(model).arg("--output_file").arg(&out);
+            run_process(cmd, cancel, Some(text), |_, _| {})?.ok_or_err("piper")?;
+            return Ok(out);
+        }
         match t.backend {
             TtsBackend::Voicevox => {
                 let base = t.voicevox_url.trim_end_matches('/');

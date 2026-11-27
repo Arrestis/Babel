@@ -165,6 +165,14 @@ fn deepl_target(l: &crate::langs::Lang) -> Option<&'static str> {
     })
 }
 
+/// DeepL's code for the language of the text being translated.
+fn deepl_source(l: &crate::langs::Lang) -> String {
+    match l.code {
+        "zh-Hans" | "zh-Hant" => "ZH".into(),
+        c => c.split('-').next().unwrap_or(c).to_uppercase(),
+    }
+}
+
 /// LibreTranslate's name for an interface language.
 fn libre_target(l: &crate::langs::Lang) -> String {
     match l.code {
@@ -195,7 +203,7 @@ fn translator_identity(cfg: &Config) -> String {
         TranslationBackend::DeepL => "deepl".into(),
         TranslationBackend::LibreTranslate => t.libre_url.clone(),
     };
-    format!("v1|{:?}|{}|{}|{}", t.backend, t.provider, model, t.style_hint)
+    format!("v2|{:?}|{}|{}|{}|{}>{}", t.backend, t.provider, model, cfg.style_hint_for_target(), t.source_language, t.target_language)
 }
 
 impl Translator {
@@ -359,17 +367,21 @@ impl Translator {
     }
 
     fn system_prompt(&self, kind: TextKind) -> String {
+        let (src, dst) = (self.cfg.source_lang(), self.cfg.target_lang());
         let what = match kind {
-            TextKind::OnScreen => "on-screen text (titles, captions, slide text, labels) from a video. Keep translations short so they fit where the English was",
-            TextKind::Speech => "spoken lines from a video, in order. They will be read aloud by a Japanese voice, so make them natural spoken Japanese and about as long as the English",
+            TextKind::OnScreen => "on-screen text (titles, captions, slide text, labels) from a video. Keep translations short so they fit where the original text was".to_string(),
+            TextKind::Speech => format!("spoken lines from a video, in order. They will be read aloud by a {} voice, so make them natural spoken {} and about as long as the original", dst.english, dst.english),
             TextKind::Interface(l) => return interface_prompt(l),
         };
         format!(
-            "You are a professional English-to-Japanese video localizer. You translate {what}. {} \
+            "You are a professional {} -to-{} video localizer. You translate {what}. {} \
              Translate the complete meaning of every item: never leave out, shorten or merge sentences, even greetings. \
              The lines are numbered. A line may be an unfinished sentence that continues in the next line: translate each line on its own anyway, never join lines. \
-             Reply ONLY with JSON of the form {{\"translations\": {{\"01\": \"...\", \"02\": \"...\"}}}} using exactly the same numbers, one Japanese translation per number. No romaji, no notes.",
-            self.cfg.translation.style_hint
+             Reply ONLY with JSON of the form {{\"translations\": {{\"01\": \"...\", \"02\": \"...\"}}}} using exactly the same numbers, one {} translation per number. No transliteration, no notes.",
+            src.english,
+            dst.english,
+            self.cfg.style_hint_for_target(),
+            dst.english
         )
     }
 
@@ -501,9 +513,9 @@ impl Translator {
         }
         let target = match kind {
             TextKind::Interface(l) => libre_target(l),
-            _ => "ja".into(),
+            _ => libre_target(self.cfg.target_lang()),
         };
-        let mut body = json!({ "q": texts, "source": "en", "target": target, "format": "text" });
+        let mut body = json!({ "q": texts, "source": self.cfg.source_lang().code.split('-').next().unwrap_or("en"), "target": target, "format": "text" });
         let key = self.cfg.key_for("libre");
         if !key.is_empty() {
             body["api_key"] = json!(key);
@@ -535,10 +547,10 @@ impl Translator {
             TextKind::Interface(l) => deepl_target(l).ok_or_else(|| {
                 service_problem(format!("DeepL can't translate into {} — choose another translator in Settings → Translation", l.english))
             })?,
-            _ => "JA",
+            _ => deepl_target(self.cfg.target_lang()).ok_or_else(|| service_problem(format!("DeepL can't translate into {} — choose another translator in Settings → Translation", self.cfg.target_lang().english)))?,
         };
         let host = if key.ends_with(":fx") { "https://api-free.deepl.com" } else { "https://api.deepl.com" };
-        let body = json!({ "text": texts, "source_lang": "EN", "target_lang": target });
+        let body = json!({ "text": texts, "source_lang": deepl_source(self.cfg.source_lang()), "target_lang": target });
         let mut resp = self
             .agent
             .post(format!("{host}/v2/translate"))

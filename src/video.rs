@@ -240,7 +240,8 @@ pub fn render_final(cfg: &Config, job: &RenderJob, info: &MediaInfo, cancel: &Ca
             if cfg.audio.keep_original_track && info.has_audio {
                 cmd.args(["-map", "0:a:0?"]);
             }
-            cmd.args(["-c:a", "aac", "-b:a", "192k", "-metadata:s:a:0", "language=jpn", "-metadata:s:a:0", "title=Japanese dub"]);
+            let dst = cfg.target_lang();
+            cmd.args(["-c:a", "aac", "-b:a", "192k", "-metadata:s:a:0"]).arg(format!("language={}", dst.iso639_2())).arg("-metadata:s:a:0").arg(format!("title={} dub", dst.english));
             if cfg.audio.keep_original_track && info.has_audio {
                 cmd.args(["-metadata:s:a:1", "language=eng", "-metadata:s:a:1", "title=Original English"]);
             }

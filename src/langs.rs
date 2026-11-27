@@ -227,6 +227,80 @@ pub fn english() -> &'static Lang {
     find("en").expect("English is in the list")
 }
 
+/// Japanese, the default language videos are translated into.
+pub fn japanese() -> &'static Lang {
+    find("ja").expect("Japanese is in the list")
+}
+
+impl Lang {
+    /// The name to show in the interface: the English name in the English interface, otherwise
+    /// the language's own name (understood whatever the interface language is).
+    pub fn shown(&self) -> &'static str {
+        if crate::i18n::current() == "en" { self.english } else { self.native }
+    }
+
+    /// Whisper's code for this language, or None when Whisper doesn't know it (then it guesses).
+    pub fn whisper_code(&self) -> Option<&'static str> {
+        const KNOWN: &[&str] = &[
+            "af", "am", "ar", "as", "az", "be", "bg", "bn", "bo", "bs", "ca", "cs", "cy", "da", "de", "el", "en", "es", "et", "eu",
+            "fa", "fi", "fr", "gl", "gu", "ha", "haw", "he", "hi", "hr", "ht", "hu", "hy", "id", "is", "it", "ja", "ka", "kk", "km",
+            "kn", "ko", "la", "lb", "lo", "lt", "lv", "mg", "mi", "mk", "ml", "mn", "mr", "ms", "mt", "my", "ne", "nl", "no", "pa",
+            "pl", "ps", "pt", "ro", "ru", "sa", "sd", "si", "sk", "sl", "sn", "so", "sq", "sr", "su", "sv", "sw", "ta", "te", "tg",
+            "th", "tk", "tr", "tt", "uk", "ur", "uz", "vi", "yi", "yo",
+        ];
+        match self.code {
+            "zh-Hans" | "zh-Hant" => Some("zh"),
+            "fil" => Some("tl"),
+            "jv" => Some("jw"),
+            c => KNOWN.iter().find(|k| **k == c).copied(),
+        }
+    }
+
+    /// Tesseract's language data name (traineddata) for on-screen text in this language.
+    pub fn tesseract_code(&self) -> Option<&'static str> {
+        Some(match self.code {
+            "af" => "afr", "am" => "amh", "ar" => "ara", "as" => "asm", "az" => "aze", "be" => "bel", "bg" => "bul",
+            "bn" => "ben", "bo" => "bod", "bs" => "bos", "ca" => "cat", "ceb" => "ceb", "co" => "cos", "cs" => "ces",
+            "cy" => "cym", "da" => "dan", "de" => "deu", "dv" => "div", "el" => "ell", "en" => "eng", "eo" => "epo",
+            "es" => "spa", "et" => "est", "eu" => "eus", "fa" => "fas", "fi" => "fin", "fil" => "fil", "fr" => "fra",
+            "fy" => "fry", "ga" => "gle", "gd" => "gla", "gl" => "glg", "gu" => "guj", "he" => "heb", "hi" => "hin",
+            "hr" => "hrv", "ht" => "hat", "hu" => "hun", "hy" => "hye", "id" => "ind", "is" => "isl", "it" => "ita",
+            "ja" => "jpn", "jv" => "jav", "ka" => "kat", "kk" => "kaz", "km" => "khm", "kn" => "kan", "ko" => "kor",
+            "ku" => "kmr", "ky" => "kir", "la" => "lat", "lb" => "ltz", "lo" => "lao", "lt" => "lit", "lv" => "lav",
+            "mi" => "mri", "mk" => "mkd", "ml" => "mal", "mn" => "mon", "mr" => "mar", "ms" => "msa", "mt" => "mlt",
+            "my" => "mya", "ne" => "nep", "nl" => "nld", "no" => "nor", "or" => "ori", "pa" => "pan", "pl" => "pol",
+            "ps" => "pus", "pt" => "por", "qu" => "que", "ro" => "ron", "ru" => "rus", "sa" => "san", "sd" => "snd",
+            "si" => "sin", "sk" => "slk", "sl" => "slv", "sq" => "sqi", "sr" => "srp", "su" => "sun", "sv" => "swe",
+            "sw" => "swa", "ta" => "tam", "te" => "tel", "tg" => "tgk", "th" => "tha", "ti" => "tir", "tr" => "tur",
+            "tt" => "tat", "ug" => "uig", "uk" => "ukr", "ur" => "urd", "uz" => "uzb", "vi" => "vie", "yi" => "yid",
+            "yo" => "yor", "zh-Hans" => "chi_sim", "zh-Hant" => "chi_tra",
+            _ => return None,
+        })
+    }
+
+    /// ISO 639-2 code for the dubbed audio track's language tag ("und" when unknown).
+    pub fn iso639_2(&self) -> &'static str {
+        match self.code {
+            "en" => "eng", "ja" => "jpn", "es" => "spa", "fr" => "fre", "de" => "ger", "pt" => "por", "it" => "ita",
+            "ru" => "rus", "zh-Hans" | "zh-Hant" => "chi", "ko" => "kor", "ar" => "ara", "hi" => "hin", "id" => "ind",
+            "tr" => "tur", "vi" => "vie", "th" => "tha", "pl" => "pol", "nl" => "dut", "sv" => "swe", "uk" => "ukr",
+            "el" => "gre", "he" => "heb", "cs" => "cze", "ro" => "rum", "hu" => "hun", "da" => "dan", "fi" => "fin",
+            "no" => "nor", "fa" => "per", "bn" => "ben", "ta" => "tam", "te" => "tel", "ms" => "may", "fil" => "fil",
+            "sw" => "swa", "ur" => "urd", "bg" => "bul", "hr" => "hrv", "sr" => "srp", "sk" => "slo", "sl" => "slv",
+            "ca" => "cat", "lt" => "lit", "lv" => "lav", "et" => "est",
+            _ => "und",
+        }
+    }
+
+    /// Languages written without spaces between words (lines may break between any two letters).
+    pub fn no_spaces(&self) -> bool {
+        matches!(
+            self.script,
+            Script::Japanese | Script::ChineseSimplified | Script::ChineseTraditional | Script::Thai | Script::Lao | Script::Khmer | Script::Myanmar | Script::Tibetan
+        )
+    }
+}
+
 /// The language with this code (case doesn't matter).
 pub fn find(code: &str) -> Option<&'static Lang> {
     LANGUAGES.iter().find(|l| l.code.eq_ignore_ascii_case(code.trim()))

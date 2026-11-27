@@ -35,6 +35,7 @@ mod langs;
 mod logfile;
 mod ocr;
 mod overlay;
+mod piper;
 mod pipeline;
 mod services;
 mod tools;

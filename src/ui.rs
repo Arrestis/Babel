@@ -1549,6 +1549,24 @@ impl BabelApp {
                         }
                     }
                 });
+                ui.add_space(8.0);
+                // The video's language and the language to translate into (any two, both ways).
+                let mut changed = false;
+                ui.horizontal(|ui| {
+                    ui.add_sized(vec2(label_w, 28.0), egui::Label::new(RichText::new(tr("Video language → translate into")).color(MUTED)));
+                    changed |= language_combo(ui, "src_lang", &mut self.cfg.translation.source_language);
+                    if ui.add_sized(vec2(34.0, 28.0), egui::Button::new("⇄")).on_hover_text(tr("Swap the two languages")).clicked() {
+                        std::mem::swap(&mut self.cfg.translation.source_language, &mut self.cfg.translation.target_language);
+                        changed = true;
+                    }
+                    changed |= language_combo(ui, "dst_lang", &mut self.cfg.translation.target_language);
+                });
+                if self.cfg.translation.source_language == self.cfg.translation.target_language {
+                    hint(ui, tr("Choose two different languages."));
+                }
+                if changed {
+                    self.refresh_output_name();
+                }
             });
         });
         if let Some(p) = picked_input {
@@ -1565,7 +1583,18 @@ impl BabelApp {
             "mov" => "mov",
             _ => "mp4",
         };
-        self.cfg.last_output = p.with_file_name(format!("{stem}.ja.{out_ext}")).display().to_string();
+        self.cfg.last_output = p.with_file_name(format!("{stem}.{}.{out_ext}", self.cfg.target_lang().code)).display().to_string();
+    }
+
+    /// Renames the output after a language change (`name.ja.mp4` → `name.es.mp4`).
+    fn refresh_output_name(&mut self) {
+        let out = PathBuf::from(self.cfg.last_output.trim());
+        let (Some(stem), Some(ext)) = (out.file_stem().map(|s| s.to_string_lossy().to_string()), out.extension().map(|e| e.to_string_lossy().to_string())) else { return };
+        let code = self.cfg.target_lang().code;
+        let base = langs::LANGUAGES.iter().find_map(|l| stem.strip_suffix(&format!(".{}", l.code)).map(|b| b.to_string()));
+        if let Some(base) = base {
+            self.cfg.last_output = out.with_file_name(format!("{base}.{code}.{ext}")).display().to_string();
+        }
     }
 
     fn progress_card(&mut self, ui: &mut egui::Ui) {
@@ -1598,7 +1627,7 @@ impl BabelApp {
         let scroll_to_bars = std::mem::take(&mut self.reveal_progress);
         card(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.label(RichText::new(tr("2  ·  Translate to Japanese")).size(17.0).strong().color(CREAM));
+                ui.label(RichText::new(trf("2  ·  Translate {0} → {1}", &[self.cfg.source_lang().shown(), self.cfg.target_lang().shown()])).size(17.0).strong().color(CREAM));
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     if let Some(run) = self.run.as_mut() {
                         let label = if run.cancelling { tr("Stopping…") } else { tr("■  Cancel") };
@@ -2802,6 +2831,24 @@ fn language_row(ui: &mut egui::Ui, l: &Lang, current: bool, tag: &str) -> egui::
         p.text(egui::pos2(rect.right() - 8.0, y + 1.0), Align2::RIGHT_CENTER, tag, FontId::proportional(11.5), MUTED);
     }
     if l.script.rtl() { resp.on_hover_text(tr("Right-to-left writing may show in the wrong order in places.")) } else { resp }
+}
+
+/// A drop-down of every language (own name beside the English one when the fonts can show it).
+fn language_combo(ui: &mut egui::Ui, id: &str, code: &mut String) -> bool {
+    let cur = langs::find(code).unwrap_or_else(langs::english);
+    let mut changed = false;
+    egui::ComboBox::from_id_salt(id).width(190.0).selected_text(cur.english).show_ui(ui, |ui| {
+        egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {
+            for l in langs::LANGUAGES {
+                let label = if l.native != l.english && l.script.built_in() { format!("{} · {}", l.english, l.native) } else { l.english.to_string() };
+                if ui.selectable_label(cur.code == l.code, label).clicked() {
+                    *code = l.code.to_string();
+                    changed = true;
+                }
+            }
+        });
+    });
+    changed
 }
 
 fn toggle_chip(ui: &mut egui::Ui, on: &mut bool, label: &str) {

@@ -326,9 +326,100 @@ fn script_candidates(script: Script) -> Vec<(PathBuf, u32)> {
     v
 }
 
+// ---------------------------------------------------------------- fonts for the video overlays
+
+/// A bold font for drawing the translation over the video in `lang`'s writing: the font chosen
+/// in Settings if it has the letters, else one the computer has, else a downloaded Noto font.
+pub fn find_overlay_font(lang: &crate::langs::Lang, user_path: &str) -> Option<FoundFont> {
+    let script = lang.script;
+    let user = user_path.trim();
+    if !user.is_empty() {
+        let p = PathBuf::from(user);
+        if std::fs::read(&p).is_ok_and(|d| has_chars(&d, 0, script.sample())) {
+            return Some(FoundFont { path: p, index: 0 });
+        }
+    }
+    if script == Script::Japanese {
+        return find_cjk_font(user_path);
+    }
+    let mut v: Vec<(PathBuf, u32)> = Vec::new();
+    if let Some((file, _)) = overlay_font_download(lang) {
+        v.push((crate::config::fonts_dir().join(file), 0));
+    }
+    #[cfg(target_os = "windows")]
+    {
+        let windir = std::env::var("WINDIR").unwrap_or_else(|_| "C:\\Windows".into());
+        let f = PathBuf::from(windir).join("Fonts");
+        let bold: &[&str] = match script {
+            Script::Latin | Script::Greek | Script::Cyrillic | Script::Armenian | Script::Georgian | Script::Hebrew | Script::Arabic => {
+                &["segoeuib.ttf", "arialbd.ttf"]
+            }
+            Script::ChineseSimplified => &["msyhbd.ttc"],
+            Script::ChineseTraditional => &["msjhbd.ttc"],
+            Script::Korean => &["malgunbd.ttf"],
+            Script::Thai | Script::Lao | Script::Khmer => &["LeelaUIb.ttf"],
+            Script::Ethiopic => &["ebrimabd.ttf"],
+            Script::Myanmar => &["mmrtextb.ttf"],
+            _ => &[],
+        };
+        for n in bold {
+            v.push((f.join(n), 0));
+        }
+    }
+    #[cfg(target_os = "macos")]
+    if script.built_in() {
+        for p in ["/System/Library/Fonts/Supplemental/Arial Bold.ttf", "/Library/Fonts/Arial Bold.ttf", "/System/Library/Fonts/Helvetica.ttc"] {
+            v.push((PathBuf::from(p), 0));
+        }
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    if script.built_in() {
+        for p in [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
+            "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
+            "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf",
+            "/usr/share/fonts/noto/NotoSans-Bold.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        ] {
+            v.push((PathBuf::from(p), 0));
+        }
+    }
+    for (path, index) in v {
+        if path.is_file() && std::fs::read(&path).is_ok_and(|d| has_chars(&d, index, script.sample())) {
+            return Some(FoundFont { path, index });
+        }
+    }
+    // Any font with the letters (regular weight) is better than none.
+    find_script_font(script)
+}
+
+/// The free Noto font downloaded for overlays in `lang`'s writing when the computer has none.
+pub fn overlay_font_download(lang: &crate::langs::Lang) -> Option<(&'static str, &'static str)> {
+    match lang.script {
+        Script::Japanese => Some((NOTO_FILE, NOTO_URL)),
+        Script::Latin | Script::Greek | Script::Cyrillic => {
+            Some(("NotoSans-Bold.ttf", "https://github.com/notofonts/notofonts.github.io/raw/main/fonts/NotoSans/hinted/ttf/NotoSans-Bold.ttf"))
+        }
+        s => script_font_download(s),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Every language can get a font for its overlays (on this computer, or by download).
+    #[test]
+    fn every_language_has_an_overlay_font() {
+        for l in crate::langs::LANGUAGES {
+            assert!(overlay_font_download(l).is_some(), "{} has no overlay font download", l.english);
+        }
+        #[cfg(target_os = "windows")]
+        for l in crate::langs::LANGUAGES {
+            assert!(find_overlay_font(l, "").is_some(), "Windows has no overlay font for {}", l.english);
+        }
+    }
 
     /// Every writing system in the language list has a font on this computer, or a download.
     #[test]
