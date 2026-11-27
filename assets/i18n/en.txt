@@ -345,3 +345,4 @@ d8c63b34	Video language → translate into
 4ff229a4	Swap the two languages
 19d74346	Choose two different languages.
 76e6baef	2  ·  Translate {0} → {1}
+86f2a063	Translate the video into this language

@@ -494,7 +494,7 @@ impl Config {
 
     /// The video's language (English when unset or unknown).
     pub fn source_lang(&self) -> &'static crate::langs::Lang {
-        crate::langs::find(&self.translation.source_language).unwrap_or_else(crate::langs::english)
+        crate::langs::find(self.ui_lang()).unwrap_or_else(crate::langs::english)
     }
 
     /// The language the video is translated into (Japanese when unset or unknown).

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.1
+
+- The language to translate into now sits to the right of the speaking-mouth button, which is on its left. The video's language is always the display language chosen with the mouth.
+
 ## 1.3.0
 
 ### New

@@ -222,11 +222,11 @@ babelcraft --version
 1. Put these files in your repository folder (e.g. a clone of `https://github.com/Arrestis/Babel`), then:
    ```bash
    git add .
-   git commit -m "BabelCraft 1.3.0"
+   git commit -m "BabelCraft 1.3.1"
    git push
    ```
 2. **Actions** builds every platform on each push (`.github/workflows/release.yml`).
-3. To publish downloads: `git tag v1.3.0 && git push origin v1.3.0` → a Release is created with:
+3. To publish downloads: `git tag v1.3.1 && git push origin v1.3.1` → a Release is created with:
    Windows x64 / x86 / ARM64 / x64-whisper `.msi` installers and `.zip` files, Linux x86_64 / aarch64 `.tar.gz` + `.deb` + `.AppImage` (+ x86_64-whisper), macOS universal `.dmg` (+ `-metal`).
 
 ## Project layout

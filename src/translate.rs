@@ -203,7 +203,7 @@ fn translator_identity(cfg: &Config) -> String {
         TranslationBackend::DeepL => "deepl".into(),
         TranslationBackend::LibreTranslate => t.libre_url.clone(),
     };
-    format!("v2|{:?}|{}|{}|{}|{}>{}", t.backend, t.provider, model, cfg.style_hint_for_target(), t.source_language, t.target_language)
+    format!("v2|{:?}|{}|{}|{}|{}>{}", t.backend, t.provider, model, cfg.style_hint_for_target(), cfg.source_lang().code, t.target_language)
 }
 
 impl Translator {

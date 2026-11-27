@@ -776,6 +776,30 @@ impl BabelApp {
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         toggle_chip(ui, &mut self.show_log, tr("Log console"));
                         toggle_chip(ui, &mut self.show_settings, tr("Settings"));
+                        // The language to translate into, right beside the mouth button. The video's
+                        // language is always the display language chosen with the mouth.
+                        ui.add_space(6.0);
+                        let src_code = self.cfg.ui_lang().to_string();
+                        let mut dst = self.cfg.translation.target_language.clone();
+                        let before = dst.clone();
+                        egui::ComboBox::from_id_salt("dst_lang")
+                            .width(150.0)
+                            .selected_text(format!("→ {}", langs::find(&dst).map(|l| l.english).unwrap_or("Japanese")))
+                            .show_ui(ui, |ui| {
+                                egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {
+                                    for l in langs::LANGUAGES.iter().filter(|l| l.code != src_code) {
+                                        let label = if l.native != l.english && l.script.built_in() { format!("{} · {}", l.english, l.native) } else { l.english.to_string() };
+                                        ui.selectable_value(&mut dst, l.code.to_string(), label);
+                                    }
+                                });
+                            })
+                            .response
+                            .on_hover_text(tr("Translate the video into this language"));
+                        if dst != before {
+                            self.cfg.translation.target_language = dst;
+                            self.refresh_output_name();
+                        }
+                        ui.add_space(6.0);
                         // Interface language: one button with the speaking-mouth picture, opening
                         // a list of every language (each shown in its own writing).
                         ui.add_space(6.0);
@@ -1549,24 +1573,6 @@ impl BabelApp {
                         }
                     }
                 });
-                ui.add_space(8.0);
-                // The video's language and the language to translate into (any two, both ways).
-                let mut changed = false;
-                ui.horizontal(|ui| {
-                    ui.add_sized(vec2(label_w, 28.0), egui::Label::new(RichText::new(tr("Video language → translate into")).color(MUTED)));
-                    changed |= language_combo(ui, "src_lang", &mut self.cfg.translation.source_language);
-                    if ui.add_sized(vec2(34.0, 28.0), egui::Button::new("⇄")).on_hover_text(tr("Swap the two languages")).clicked() {
-                        std::mem::swap(&mut self.cfg.translation.source_language, &mut self.cfg.translation.target_language);
-                        changed = true;
-                    }
-                    changed |= language_combo(ui, "dst_lang", &mut self.cfg.translation.target_language);
-                });
-                if self.cfg.translation.source_language == self.cfg.translation.target_language {
-                    hint(ui, tr("Choose two different languages."));
-                }
-                if changed {
-                    self.refresh_output_name();
-                }
             });
         });
         if let Some(p) = picked_input {
@@ -2354,6 +2360,10 @@ impl eframe::App for BabelApp {
         // Interface language: fonts are set up again when it changes; without a font for its
         // letters, or before its translation exists, the interface stays in English.
         let code = self.cfg.ui_lang().to_string();
+        if self.cfg.translation.target_language == code {
+            self.cfg.translation.target_language = if code == "en" { "ja".into() } else { "en".into() };
+            self.refresh_output_name();
+        }
         // The language menu shows every language's own name, so it needs every writing system.
         if self.lang_menu_open && !self.menu_fonts {
             self.menu_fonts = true;
